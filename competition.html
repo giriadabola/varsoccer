@@ -170,8 +170,49 @@
         
         const fetchAndStoreClubs = async () => { if(clubsMap.size > 0) return; const s=await getDocs(collection(db,'clubes')); s.forEach(d=>clubsMap.set(d.id,d.data())); };
         const fetchCompetitionDetails = async (id) => { const ds=await getDoc(doc(db,'competicoes',id)); if(ds.exists()){ currentCompetitionData=ds.data(); document.getElementById('competition-header').innerHTML=`<img src="${currentCompetitionData.logoUrl}" id="competition-logo"><h1 id="competition-name">${currentCompetitionData.nome}</h1>`; return currentCompetitionData; } return null; };
-        const fetchAllGamesForSeason = async (competitionId, seasonName) => { const lm = document.getElementById('games-loading-message'); lm.textContent = `Loading season matches for ${seasonName}...`; lm.style.display = 'block'; document.getElementById('more-matches-section').style.display = 'none'; const gq = query(collection(db, 'jogos'), where("competicaoId", "==", competitionId), where("temporada", "==", seasonName)); const sn = await getDocs(gq); gamesOfSeason = []; sn.forEach(d => gamesOfSeason.push({ id: d.id, ...d.data() })); if (gamesOfSeason.length === 0) { lm.textContent = 'No matches found for this season.'; document.getElementById('games-grid').innerHTML = ''; document.getElementById('team-list').innerHTML = '<p>No teams found.</p>'; return; } gamesOfSeason.sort((a,b) => new Date(a.dataJogo) - new Date(b.dataJogo)); lm.style.display = 'none'; renderTeamsList(gamesOfSeason); renderLatestGamesGrid(gamesOfSeason); renderJornadaDropdown(gamesOfSeason); document.getElementById('more-matches-section').style.display = 'block'; };
-        const renderTeamsList = (games) => { const tI = new Set(); games.forEach(g => { tI.add(g.equipaCasaId); tI.add(g.equipaForaId); }); const ts = []; tI.forEach(id => { if (clubsMap.has(id)) { ts.push({ id, ...clubsMap.get(id) }); } }); ts.sort((a, b) => a.nome.localeCompare(b.nome)); const le = document.getElementById('team-list'); le.innerHTML = '<h2>Teams</h2>'; ts.forEach(t => { le.innerHTML += `<a href="team.html?id=${t.id}" class="team-item"><img src="${t.logoUrl}" alt="${t.nome}" class="team-logo"><span class="team-name">${t.nome}</span></a>`; }); };
+ const fetchAllGamesForSeason = async (competitionId, seasonName) => {
+            const lm = document.getElementById('games-loading-message');
+            lm.textContent = `Loading season matches for ${seasonName}...`;
+            lm.style.display = 'block';
+            document.getElementById('more-matches-section').style.display = 'none';
+
+            // 1. Buscar TODOS os jogos da temporada (sem alterações aqui)
+            const gq = query(collection(db, 'jogos'), where("competicaoId", "==", competitionId), where("temporada", "==", seasonName));
+            const sn = await getDocs(gq);
+            const rawGames = [];
+            sn.forEach(d => rawGames.push({ id: d.id, ...d.data() }));
+
+            // 2. APLICAR A NOVA REGRA DE FILTRAGEM (A CORREÇÃO ESTÁ AQUI)
+            const now = new Date();
+            now.setHours(0, 0, 0, 0); // Comparar apenas com o início do dia.
+
+            gamesOfSeason = rawGames.filter(game => {
+                const gameDate = parseDate(game.dataJogo);
+                if (isNaN(gameDate.getTime())) return true; // Manter jogo se a data for inválida
+
+                const isFutureGame = gameDate > now;
+                const hasInvalidResult = !game.resultadoFinal || game.resultadoFinal.trim() === "" || game.resultadoFinal.toUpperCase() === 'X';
+                
+                // Manter o jogo se a condição de exclusão (futuro E resultado inválido) NÃO for verdadeira.
+                return !(isFutureGame && hasInvalidResult);
+            });
+
+            // 3. O resto do código continua, mas agora usando a lista JÁ FILTRADA
+            if (gamesOfSeason.length === 0) {
+                lm.textContent = 'No matches found for this season with the current filter.';
+                document.getElementById('games-grid').innerHTML = '';
+                document.getElementById('team-list').innerHTML = '<p>No teams found.</p>';
+                return;
+            }
+
+            gamesOfSeason.sort((a,b) => parseDate(a.dataJogo) - parseDate(b.dataJogo));
+            lm.style.display = 'none';
+            renderTeamsList(gamesOfSeason);
+            renderLatestGamesGrid(gamesOfSeason);
+            renderJornadaDropdown(gamesOfSeason);
+            document.getElementById('more-matches-section').style.display = 'block';
+        };
+                const renderTeamsList = (games) => { const tI = new Set(); games.forEach(g => { tI.add(g.equipaCasaId); tI.add(g.equipaForaId); }); const ts = []; tI.forEach(id => { if (clubsMap.has(id)) { ts.push({ id, ...clubsMap.get(id) }); } }); ts.sort((a, b) => a.nome.localeCompare(b.nome)); const le = document.getElementById('team-list'); le.innerHTML = '<h2>Teams</h2>'; ts.forEach(t => { le.innerHTML += `<a href="team.html?id=${t.id}" class="team-item"><img src="${t.logoUrl}" alt="${t.nome}" class="team-logo"><span class="team-name">${t.nome}</span></a>`; }); };
         const renderLatestGamesGrid = (games) => { const gg = document.getElementById('games-grid'); gg.innerHTML = ''; if (games.length === 0) return; const ln = games[games.length - 1].jornada; const lg = games.filter(g => String(g.jornada) == String(ln)); lg.forEach(g => { const ht = clubsMap.get(g.equipaCasaId); const at = clubsMap.get(g.equipaForaId); if (!ht || !at) return; gg.innerHTML += `<div class="game-card"><div class="game-card-jornada">${isNaN(g.jornada) ? g.jornada : 'Round ' + g.jornada}</div><div class="game-card-content"><a href="team.html?id=${g.equipaCasaId}" class="game-card-team"><img src="${ht.logoUrl}"></a><a href="game.html?id=${g.id}" class="game-card-result">${g.resultadoFinal || 'VS'}</a><a href="team.html?id=${g.equipaForaId}" class="game-card-team"><img src="${at.logoUrl}"></a></div></div>`; }); };
         
         const renderJornadaDropdown = (games) => {
@@ -233,6 +274,14 @@
                 document.getElementById('more-matches-section').style.display = 'none';
             }
         };
+
+  function parseDate(dateString) {
+            if (!dateString) return new Date(null);
+            if (dateString.includes('-')) { return new Date(dateString); }
+            const parts = dateString.split('/');
+            if (parts.length === 3) { return new Date(parts[2], parts[1] - 1, parts[0]); }
+            return new Date(null);
+        }
 
         const renderMoreMatchesList = (jornadaNumber) => {
             const lc = document.getElementById('more-matches-list');
