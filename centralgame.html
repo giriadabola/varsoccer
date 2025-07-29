@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Vídeos dos Jogos</title>
+    
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; color: #333; margin: 0; padding: 20px; font-size: 0.9em; }
+        .container { 
+            width: 100%; max-width: 1000px; margin: 0 auto; 
+            background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+            border-radius: 8px; overflow: hidden; padding: 20px;
+        }
+        h1 {
+            margin-top: 0; color: #333; border-bottom: 2px solid #007bff;
+            padding-bottom: 10px; margin-bottom: 20px; font-size: 1.5em;
+        }
+        #gameCounter {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .editor-main { display: flex; gap: 20px; min-height: 400px; }
+        
+        .game-list-column { flex: 1; border-right: 1px solid #ddd; padding-right: 20px; display: flex; flex-direction: column; }
+        .game-list-column h2 { font-size: 1.1em; margin-top: 0; color: #555; }
+        .game-list-container { flex-grow: 1; overflow-y: auto; max-height: 500px; border: 1px solid #eee; border-radius: 4px; padding: 5px; }
+        #gamesWithoutVideoList { list-style: none; padding: 0; margin: 0; }
+        .game-list-item { padding: 10px 12px; cursor: pointer; border-radius: 4px; margin-bottom: 4px; border: 1px solid transparent; transition: background-color 0.2s, border-color 0.2s; }
+        .game-list-item:hover { background-color: #f0f2f5; }
+        .game-list-item.active { background-color: #007bff; color: white; font-weight: bold; border-color: #0056b3; }
+        .loading-message { color: #888; padding: 10px; }
+
+        .edit-panel-column { flex: 1.5; }
+        .edit-panel-column h2 { font-size: 1.1em; margin-top: 0; color: #555; }
+        #selectedGameName { font-weight: bold; background-color: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 15px; min-height: 20px; }
+        #videoForm fieldset { border: 1px solid #ddd; padding: 15px; border-radius: 4px; }
+        #videoForm fieldset:disabled { opacity: 0.5; }
+        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
+        .form-group label { display: block; margin-bottom: 4px; font-weight: bold; }
+        .form-group input[type="url"], .form-group input[type="checkbox"] { box-sizing: border-box; }
+        .form-group input[type="url"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 3px; }
+        .form-group.checkbox-group { flex-direction: row; align-items: center; gap: 8px; } /* NOVO */
+        .button-group { display: flex; gap: 10px; margin-top: 15px; }
+        .action-btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
+        .save-btn { background-color: #28a745; color: white; }
+        .save-btn:hover { background-color: #218838; }
+        .search-btn { background-color: #6c757d; color: white; }
+        .search-btn:hover { background-color: #5a6268; }
+        .action-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        
+        /* --- NOVO --- */
+        #videoPreview { margin-top: 20px; }
+        #videoPreview iframe { max-width: 100%; border-radius: 4px; border: 1px solid #ddd; }
+        /* --- FIM NOVO --- */
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1><span id="gameCounter">0</span> Editar Vídeos</h1>
+        
+        <div class="editor-main">
+            <div class="game-list-column">
+                <h2>Jogos Sem Vídeo</h2>
+                <div class="game-list-container">
+                    <ul id="gamesWithoutVideoList">
+                        <li class="loading-message">A carregar jogos...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="edit-panel-column">
+                <h2>Painel de Edição</h2>
+                <form id="videoForm">
+                    <fieldset id="videoFormFieldset" disabled>
+                        <div class="form-group">
+                            <label>Jogo Selecionado:</label>
+                            <div id="selectedGameName">Selecione um jogo da lista</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="videoUrlInput">Link do Vídeo (Youtube, etc.)</label>
+                            <input type="url" id="videoUrlInput" placeholder="https://exemplo.com/video" required>
+                        </div>
+                        <div class="button-group">
+                            <button type="button" id="searchYouTubeBtn" class="action-btn search-btn">Procurar</button>
+                            <button type="submit" class="action-btn save-btn">Gravar</button>
+                        </div>
+
+                        <!-- NOVO: Checkbox e área de preview -->
+                        <div class="form-group checkbox-group" style="margin-top: 15px;">
+                            <input type="checkbox" id="useApiYtCheckbox">
+                            <label for="useApiYtCheckbox" style="margin-bottom: 0; font-weight: normal;">Incorporar vídeo do YouTube (usar API)</label>
+                        </div>
+                        <div id="videoPreview"></div>
+                        <!-- FIM NOVO -->
+
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o", authDomain: "varsoccer-26040.firebaseapp.com", projectId: "varsoccer-26040", storageBucket: "varsoccer-26040.firebasestorage.app", messagingSenderId: "11877829810", appId: "1:11877829810:web:98f9baa131a3b88b6e8dab" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const gameListElement = document.getElementById('gamesWithoutVideoList');
+        const videoForm = document.getElementById('videoForm');
+        const videoFormFieldset = document.getElementById('videoFormFieldset');
+        const selectedGameNameElement = document.getElementById('selectedGameName');
+        const videoUrlInputElement = document.getElementById('videoUrlInput');
+        const searchYouTubeBtn = document.getElementById('searchYouTubeBtn');
+        const gameCounterElement = document.getElementById('gameCounter');
+        
+        // NOVO: Elementos do preview e checkbox
+        const videoPreviewElement = document.getElementById('videoPreview');
+        const useApiYtCheckbox = document.getElementById('useApiYtCheckbox');
+
+        let gamesWithoutVideo = [];
+        let selectedGame = null;
+
+        function renderGameList() {
+            gameListElement.innerHTML = '';
+            gameCounterElement.textContent = gamesWithoutVideo.length;
+
+            if (gamesWithoutVideo.length === 0) {
+                gameListElement.innerHTML = '<li class="loading-message">Ótimo! Todos os jogos elegíveis já têm vídeo.</li>';
+                return;
+            }
+
+            gamesWithoutVideo.forEach(game => {
+                const li = document.createElement('li');
+                li.textContent = game.nomeJogo;
+                li.dataset.id = game.id;
+                li.className = 'game-list-item';
+                gameListElement.appendChild(li);
+            });
+        }
+
+        async function initializeAppLogic() {
+            try {
+                const gamesQuery = query(collection(db, "jogos"), orderBy("dataJogo", "desc"));
+                const gamesSnapshot = await getDocs(gamesQuery);
+                const allGamesData = gamesSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                gamesWithoutVideo = allGamesData.filter(game => 
+                    (!game.videoUrl || game.videoUrl.trim() === '') &&
+                    (game.resultadoFinal && game.resultadoFinal.trim() !== '')
+                );
+                
+                renderGameList();
+            } catch (error) {
+                console.error("Erro ao carregar os jogos: ", error);
+                gameListElement.innerHTML = '<li class="loading-message">Ocorreu um erro ao carregar os jogos.</li>';
+            }
+        }
+        
+        function selectGameById(gameId) {
+             selectedGame = gamesWithoutVideo.find(g => g.id === gameId);
+             if (selectedGame) {
+                const currentActive = gameListElement.querySelector('.active');
+                if (currentActive) currentActive.classList.remove('active');
+                
+                const newActiveLi = gameListElement.querySelector(`li[data-id="${gameId}"]`);
+                if (newActiveLi) newActiveLi.classList.add('active');
+
+                videoFormFieldset.disabled = false;
+                selectedGameNameElement.textContent = selectedGame.nomeJogo;
+                videoUrlInputElement.value = '';
+                videoUrlInputElement.focus();
+
+                // NOVO: Limpa o preview e desmarca a caixa ao selecionar um novo jogo
+                videoPreviewElement.innerHTML = '';
+                useApiYtCheckbox.checked = false;
+             }
+        }
+
+        function triggerYouTubeSearch(game) {
+            if (!game) return;
+            const searchTerm = encodeURIComponent(game.nomeJogo);
+            const youtubeUrl = `https://www.youtube.com/results?search_query=${searchTerm}`;
+            window.open(youtubeUrl, '_blank');
+        }
+        
+        // --- NOVO: Função para gerar preview ---
+        function updateVideoPreview() {
+            const url = videoUrlInputElement.value.trim();
+            // Regex para extrair o ID de vários formatos de URL do YouTube
+            const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+            const match = url.match(youtubeRegex);
+
+            if (match && match[1]) {
+                const videoId = match[1];
+                const iframeHtml = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                videoPreviewElement.innerHTML = iframeHtml;
+            } else {
+                videoPreviewElement.innerHTML = ''; // Limpa se não for um link do YouTube válido
+            }
+        }
+
+        // NOVO: Event listener para o campo de input da URL
+        videoUrlInputElement.addEventListener('input', updateVideoPreview);
+        // --- FIM NOVO ---
+
+        gameListElement.addEventListener('click', (e) => {
+            if (e.target.tagName === 'LI' && e.target.dataset.id) {
+                selectGameById(e.target.dataset.id);
+            }
+        });
+
+        searchYouTubeBtn.addEventListener('click', () => {
+            if (!selectedGame) {
+                alert("Por favor, selecione um jogo da lista primeiro.");
+                return;
+            }
+            triggerYouTubeSearch(selectedGame);
+        });
+
+        videoForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const videoUrl = videoUrlInputElement.value.trim();
+            if (!selectedGame || !videoUrl) {
+                alert("Por favor, selecione um jogo e insira um URL válido.");
+                return;
+            }
+
+            const savedGame = selectedGame;
+            const savedGameIndex = gamesWithoutVideo.findIndex(g => g.id === savedGame.id);
+
+            try {
+                const gameRef = doc(db, 'jogos', savedGame.id);
+
+                // NOVO: Prepara o objeto de dados para atualização
+                const dataToUpdate = {
+                    videoUrl: videoUrl,
+                };
+                // Adiciona o campo apiYt se a caixa estiver marcada
+                if (useApiYtCheckbox.checked) {
+                    dataToUpdate.apiYt = true;
+                }
+
+                await updateDoc(gameRef, dataToUpdate);
+                // FIM NOVO
+
+                if (savedGameIndex > -1) {
+                    gamesWithoutVideo.splice(savedGameIndex, 1);
+                }
+                renderGameList();
+
+                if (gamesWithoutVideo.length > 0) {
+                    const nextIndex = Math.min(savedGameIndex, gamesWithoutVideo.length - 1);
+                    const nextGame = gamesWithoutVideo[nextIndex];
+                    
+                    selectGameById(nextGame.id);
+                    triggerYouTubeSearch(nextGame);
+                } else {
+                    videoFormFieldset.disabled = true;
+                    selectedGameNameElement.textContent = 'Selecione um jogo da lista';
+                    videoUrlInputElement.value = '';
+                    // NOVO: Limpa o preview e desmarca a caixa quando a lista acaba
+                    videoPreviewElement.innerHTML = '';
+                    useApiYtCheckbox.checked = false;
+                    selectedGame = null;
+                }
+
+            } catch (error) {
+                console.error("Erro ao gravar o link do vídeo: ", error);
+                alert("Ocorreu um erro ao gravar. Tente novamente.");
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', initializeAppLogic);
+    </script>
+</body>
+</html>
