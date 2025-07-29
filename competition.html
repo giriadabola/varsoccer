@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competition Details</title>
+    <style>
+        /* Reset & Global Styles */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; }
+        .page-container { display: flex; flex-direction: column; height: 100vh; }
+        
+        header { padding: 10px 20px; background-color: #ffffff; border-bottom: 1px solid #dddfe2; }
+        .logo-container { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+        .logo-image { height: 40px; width: 40px; }
+        .logo-name { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
+
+        .content-wrapper { display: flex; flex-grow: 1; overflow: hidden; }
+        .sidebar { width: 280px; flex-shrink: 0; background-color: #ffffff; padding: 15px; overflow-y: auto; border-right: 1px solid #dddfe2; }
+        
+        .sidebar h2 { font-size: 1.1rem; margin-bottom: 5px; color: #333; }
+        .loading-message { color: #888; }
+        .team-item { display: flex; align-items: center; padding: 4px; border-radius: 6px; margin-bottom: 2px; text-decoration: none; color: inherit; transition: background-color 0.2s ease-in-out; }
+        .team-item:hover { background-color: #f0f2f5; }
+        .team-logo { width: 24px; height: 24px; object-fit: contain; margin-right: 8px; }
+        .team-name { font-weight: 500; font-size: 0.9rem; }
+        
+        .main-content { flex-grow: 1; padding: 20px; background-color: #f9f9f9; overflow-y: auto; }
+        
+        /* --- ESTILOS MODIFICADOS PARA PICK CARDS --- */
+        #other-competitions-section {
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #e9ecef; /* Cor de fundo diferente */
+            border-radius: 8px;
+            border-bottom: 1px solid #d1d5db;
+        }
+        #other-competitions-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .competition-pick-card {
+            display: flex;
+            align-items: center;
+            gap: 6px; /* Reduzido */
+            padding: 6px 10px; /* Reduzido */
+            background-color: #fff;
+            border-radius: 8px;
+            text-decoration: none;
+            color: inherit;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            border: 1px solid #e0e0e0;
+        }
+        .competition-pick-card:hover {
+            background-color: #f7f7f7;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        .competition-pick-card img {
+            height: 20px; /* Reduzido */
+            width: 20px;  /* Reduzido */
+            object-fit: contain;
+        }
+        .competition-pick-card span {
+            font-size: 0.8rem; /* Reduzido */
+            font-weight: 500;
+        }
+        /* --- FIM DAS MODIFICAÇÕES --- */
+
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #dddfe2; padding-bottom: 20px; }
+        #competition-header { display: flex; align-items: center; gap: 15px; }
+        #competition-logo { height: 50px; }
+        #competition-name { font-size: 1.8rem; font-weight: bold; }
+        #seasons-dropdown { padding: 8px 12px; font-size: 0.95rem; border-radius: 8px; border: 1px solid #ccc; }
+        
+        #games-grid-container { padding-bottom: 25px; border-bottom: 1px solid #dddfe2; margin-bottom: 20px;}
+        #games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .game-card { background-color: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative; width: 180px; height: 120px; display: flex; flex-direction: column; justify-content: center; }
+        .game-card-jornada { position: absolute; top: 10px; right: 10px; background-color: #f0f2f5; color: #606770; font-size: 0.7rem; padding: 3px 7px; border-radius: 6px; font-weight: bold; }
+        .game-card-content { display: flex; align-items: center; justify-content: space-around; width: 100%; }
+        .game-card-team { display: flex; align-items: center; justify-content: center; width: 45px; text-decoration: none; }
+        .game-card-team img { height: 40px; width: 40px; object-fit: contain; }
+        .game-card-result { font-size: 1.4rem; font-weight: bold; margin: 0 5px; text-decoration: none; color: inherit; }
+        
+        #more-matches-section { padding-bottom: 25px; margin-top: 20px; }
+        #more-matches-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        #more-matches-header h2 { font-size: 1.5rem; margin: 0; padding: 0; border: none; }
+        #jornada-dropdown { padding: 8px 12px; font-size: 0.95rem; border-radius: 8px; border: 1px solid #ccc; }
+        #more-matches-list { display: flex; flex-direction: column; gap: 8px; }
+        
+        .match-list-item { display: flex; align-items: center; gap: 12px; background-color: #fff; padding: 10px 15px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); text-decoration: none; color: inherit; transition: background-color 0.2s ease; }
+        .match-list-item:hover { background-color: #f0f2f5; }
+        .match-list-item img { height: 24px; width: 24px; object-fit: contain; }
+        .match-list-item span { font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <header>
+            <a href="index.html" class="logo-container">
+                <img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image">
+                <span class="logo-name">VARSOCCER</span>
+            </a>
+        </header>
+        <div class="content-wrapper">
+            <nav class="sidebar">
+                <div id="team-list"><p class="loading-message">Select a season.</p></div>
+            </nav>
+            <main class="main-content">
+                <section id="other-competitions-section" style="display: none;">
+                    <div id="other-competitions-grid"></div>
+                </section>
+
+                <div class="section-header">
+                    <div id="competition-header"><p class="loading-message">Loading details...</p></div>
+                    <div id="seasons-dropdown-container"></div>
+                </div>
+                <div id="games-grid-container">
+                     <p class="loading-message" id="games-loading-message">Select a season.</p>
+                     <div id="games-grid"></div>
+                </div>
+                <section id="more-matches-section" style="display: none;">
+                    <div id="more-matches-header">
+                        <h2>More Matches</h2>
+                        <div id="jornada-dropdown-container"></div>
+                    </div>
+                    <div id="more-matches-list-container">
+                        <p class="loading-message" id="more-matches-loading-message">Select a round.</p>
+                        <div id="more-matches-list"></div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, collection, doc, getDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o",
+            authDomain: "varsoccer-26040.firebaseapp.com",
+            projectId: "varsoccer-26040",
+            storageBucket: "varsoccer-26040.firebasestorage.app",
+            messagingSenderId: "11877829810",
+            appId: "1:11877829810:web:98f9baa131a3b88b6e8dab"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let clubsMap = new Map();
+        let gamesOfSeason = [];
+        let currentCompetitionData = null;
+        
+        async function initializePage() {
+            const competitionId = new URLSearchParams(window.location.search).get('id');
+            if (!competitionId) {
+                document.querySelector('.main-content').innerHTML = '<h1>Competition ID not provided.</h1>';
+                return;
+            }
+            await fetchAndStoreClubs();
+            const compData = await fetchCompetitionDetails(competitionId);
+            if (compData) {
+                await fetchAndRenderSeasonsDropdown(competitionId);
+                if (compData.paisId) {
+                    await fetchAndRenderOtherCompetitions(compData.paisId, competitionId);
+                }
+            }
+        }
+        
+        const fetchAndStoreClubs = async () => { if(clubsMap.size > 0) return; const s=await getDocs(collection(db,'clubes')); s.forEach(d=>clubsMap.set(d.id,d.data())); };
+        const fetchCompetitionDetails = async (id) => { const ds=await getDoc(doc(db,'competicoes',id)); if(ds.exists()){ currentCompetitionData=ds.data(); document.getElementById('competition-header').innerHTML=`<img src="${currentCompetitionData.logoUrl}" id="competition-logo"><h1 id="competition-name">${currentCompetitionData.nome}</h1>`; return currentCompetitionData; } return null; };
+        const fetchAllGamesForSeason = async (competitionId, seasonName) => { const lm = document.getElementById('games-loading-message'); lm.textContent = `Loading season matches for ${seasonName}...`; lm.style.display = 'block'; document.getElementById('more-matches-section').style.display = 'none'; const gq = query(collection(db, 'jogos'), where("competicaoId", "==", competitionId), where("temporada", "==", seasonName)); const sn = await getDocs(gq); gamesOfSeason = []; sn.forEach(d => gamesOfSeason.push({ id: d.id, ...d.data() })); if (gamesOfSeason.length === 0) { lm.textContent = 'No matches found for this season.'; document.getElementById('games-grid').innerHTML = ''; document.getElementById('team-list').innerHTML = '<p>No teams found.</p>'; return; } gamesOfSeason.sort((a,b) => new Date(a.dataJogo) - new Date(b.dataJogo)); lm.style.display = 'none'; renderTeamsList(gamesOfSeason); renderLatestGamesGrid(gamesOfSeason); renderJornadaDropdown(gamesOfSeason); document.getElementById('more-matches-section').style.display = 'block'; };
+        const renderTeamsList = (games) => { const tI = new Set(); games.forEach(g => { tI.add(g.equipaCasaId); tI.add(g.equipaForaId); }); const ts = []; tI.forEach(id => { if (clubsMap.has(id)) { ts.push({ id, ...clubsMap.get(id) }); } }); ts.sort((a, b) => a.nome.localeCompare(b.nome)); const le = document.getElementById('team-list'); le.innerHTML = '<h2>Teams</h2>'; ts.forEach(t => { le.innerHTML += `<a href="team.html?id=${t.id}" class="team-item"><img src="${t.logoUrl}" alt="${t.nome}" class="team-logo"><span class="team-name">${t.nome}</span></a>`; }); };
+        const renderLatestGamesGrid = (games) => { const gg = document.getElementById('games-grid'); gg.innerHTML = ''; if (games.length === 0) return; const ln = games[games.length - 1].jornada; const lg = games.filter(g => String(g.jornada) == String(ln)); lg.forEach(g => { const ht = clubsMap.get(g.equipaCasaId); const at = clubsMap.get(g.equipaForaId); if (!ht || !at) return; gg.innerHTML += `<div class="game-card"><div class="game-card-jornada">${isNaN(g.jornada) ? g.jornada : 'Round ' + g.jornada}</div><div class="game-card-content"><a href="team.html?id=${g.equipaCasaId}" class="game-card-team"><img src="${ht.logoUrl}"></a><a href="game.html?id=${g.id}" class="game-card-result">${g.resultadoFinal || 'VS'}</a><a href="team.html?id=${g.equipaForaId}" class="game-card-team"><img src="${at.logoUrl}"></a></div></div>`; }); };
+        
+        const renderJornadaDropdown = (games) => {
+            const container = document.getElementById('jornada-dropdown-container');
+            const uniqueJornadas = [...new Set(games.map(g => g.jornada))].filter(j => j != null);
+            
+            if (uniqueJornadas.length > 0) {
+                const competitionType = currentCompetitionData?.tipo;
+                const specialOrder = ['F', '1F', 'MF', 'QF', '1/8', 'POff'];
+
+                const getSortPriority = (jornada) => {
+                    if (isNaN(jornada)) {
+                        if (competitionType === 'Internacional Clubes' && jornada === 'POff') {
+                            return 3;
+                        }
+                        return 1;
+                    }
+                    return 2;
+                };
+
+                uniqueJornadas.sort((a, b) => {
+                    const priorityA = getSortPriority(a);
+                    const priorityB = getSortPriority(b);
+
+                    if (priorityA !== priorityB) {
+                        return priorityA - priorityB;
+                    }
+
+                    if (priorityA === 1) {
+                        return specialOrder.indexOf(a) - specialOrder.indexOf(b);
+                    }
+                    if (priorityA === 2) {
+                        return Number(b) - Number(a);
+                    }
+                    return 0;
+                });
+
+                let selectHTML = `<select id="jornada-dropdown">`;
+                uniqueJornadas.forEach(j => {
+                    const displayText = isNaN(j) ? j : `Round ${j}`;
+                    selectHTML += `<option value="${j}">${displayText}</option>`;
+                });
+                selectHTML += `</select>`;
+                
+                container.innerHTML = selectHTML;
+                
+                const selector = document.getElementById('jornada-dropdown');
+                selector.addEventListener('change', e => {
+                    const value = isNaN(e.target.value) ? e.target.value : Number(e.target.value);
+                    renderMoreMatchesList(value);
+                });
+
+                const initialValue = isNaN(selector.value) ? selector.value : Number(selector.value);
+                renderMoreMatchesList(initialValue);
+                document.getElementById('more-matches-section').style.display = 'block';
+
+            } else {
+                container.innerHTML = '';
+                document.getElementById('more-matches-section').style.display = 'none';
+            }
+        };
+
+        const renderMoreMatchesList = (jornadaNumber) => {
+            const lc = document.getElementById('more-matches-list');
+            const lm = document.getElementById('more-matches-loading-message');
+            lc.innerHTML = '';
+            lm.style.display = 'none';
+            const fg = gamesOfSeason.filter(g => String(g.jornada) === String(jornadaNumber));
+            if (fg.length === 0) {
+                lc.innerHTML = '<p>No matches found for this round.</p>';
+                return;
+            }
+            fg.forEach(g => {
+                lc.innerHTML += `<a href="game.html?id=${g.id}" class="match-list-item"><img src="${currentCompetitionData.logoUrl}"><span>${g.nomeJogo}</span></a>`;
+            });
+        };
+
+        const fetchAndRenderSeasonsDropdown = async (competitionId) => { const c = document.getElementById('seasons-dropdown-container'); const s = await getDocs(collection(db,'temporadas')); const sn = new Set(); s.forEach(d=>sn.add(d.data().nome)); if(sn.size>0){ const sel=document.createElement('select'); sel.id='seasons-dropdown'; Array.from(sn).sort().reverse().forEach(n=>{sel.innerHTML+=`<option value="${n}">${n}</option>`}); c.innerHTML=''; c.appendChild(sel); sel.addEventListener('change',e=>fetchAllGamesForSeason(competitionId, e.target.value)); fetchAllGamesForSeason(competitionId, sel.value); } };
+        
+        const fetchAndRenderOtherCompetitions = async (countryId, currentCompId) => {
+            const section = document.getElementById('other-competitions-section');
+            const gridContainer = document.getElementById('other-competitions-grid');
+            gridContainer.innerHTML = '';
+            
+            const q = query(collection(db, 'competicoes'), where("paisId", "==", countryId));
+            const querySnapshot = await getDocs(q);
+            
+            const otherCompetitions = [];
+            querySnapshot.forEach(doc => {
+                if (doc.id !== currentCompId) {
+                    otherCompetitions.push({ id: doc.id, ...doc.data() });
+                }
+            });
+
+            if (otherCompetitions.length > 0) {
+                otherCompetitions.sort((a, b) => a.nome.localeCompare(b.nome));
+                otherCompetitions.forEach(comp => {
+                    gridContainer.innerHTML += `
+                        <a href="competition.html?id=${comp.id}" class="competition-pick-card">
+                            <img src="${comp.logoUrl}" alt="${comp.nome}">
+                            <span>${comp.nome}</span>
+                        </a>
+                    `;
+                });
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        };
+
+        initializePage();
+    </script>
+</body>
+</html>
