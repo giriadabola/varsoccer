@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página de Edição</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.default.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; color: #333; margin: 0; padding: 15px; font-size: 0.9em; padding-top: 20px; }
+        .tab-container { width: 100%; max-width: 900px; margin: 0 auto; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+        .tab-buttons { display: flex; background-color: #333; }
+        .tab-button { padding: 12px 15px; cursor: pointer; border: none; background-color: #333; color: white; font-size: 0.95em; transition: background-color 0.3s; flex-grow: 1; text-align: center; border-right: 1px solid #444; }
+        .tab-button:last-child { border-right: none; }
+        .tab-button:hover { background-color: #555; }
+        .tab-button.active { background-color: #007bff; color: white; }
+        .tab-content { padding: 15px; border-top: 1px solid #ddd; display: none; }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
+        .form-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end; }
+        .form-row .form-group { flex: 1; margin-bottom: 0; }
+        .form-group label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 0.9em; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; font-size: 0.95em; }
+        .form-group select[multiple] { height: 100px; }
+        .form-group input[readonly] { background-color: #e9ecef; cursor: not-allowed; }
+        button.save-btn { background-color: #ffc107; color: black; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        button.save-btn:hover { background-color: #e0a800; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        h3 { margin-top: 0; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .search-container { border-bottom: 2px solid #007bff; padding-bottom: 15px; margin-bottom: 20px; }
+        fieldset { border: 1px solid #ddd; padding: 15px; margin-top: 10px; border-radius: 4px; }
+        fieldset:disabled { opacity: 0.6; }
+        .ts-control .item-logo, .ts-dropdown .option-logo { height: 20px; width: 20px; margin-right: 8px; vertical-align: middle; object-fit: contain; }
+        .ts-control .item-name, .ts-dropdown .option-name { vertical-align: middle; display: inline-block; }
+
+        /* --- ESTILOS PARA O POPUP DE CONFIGURAÇÕES --- */
+        .settings-btn { position: fixed; top: 15px; right: 20px; background: #333; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; z-index: 1001; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .settings-btn svg { width: 24px; height: 24px; fill: white; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; }
+        .close-btn { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .settings-panel { margin-bottom: 20px; }
+        .settings-panel h3 { font-size: 1.1em; color: #007bff; }
+        .settings-list { list-style: none; padding: 0; }
+        .settings-list li { display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid #eee; }
+        .settings-list li span { flex-grow: 1; }
+        .settings-list li select { flex-basis: 80px; padding: 4px; }
+        .arrow-btn { background: none; border: 1px solid #ccc; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+        .arrow-btn:hover { background-color: #f0f0f0; }
+    </style>
+</head>
+<body>
+
+    <!-- BOTÃO DE CONFIGURAÇÕES -->
+    <button id="openSettingsBtn" class="settings-btn" title="Configurações">
+        <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+    </button>
+
+    <!-- POPUP/MODAL DE CONFIGURAÇÕES -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Configurações</h2>
+                <span id="closeSettingsBtn" class="close-btn">×</span>
+            </div>
+            
+            <div class="settings-panel">
+                <h3>Ordem do Menu Principal</h3>
+                <p>Arraste para reordenar. Apenas competições com 'Sim' aparecerão no menu.</p>
+                <ul id="menuOrderList" class="settings-list"></ul>
+            </div>
+
+            <div class="settings-panel">
+                <h3>Competições no Topo (Pick Cards)</h3>
+                <p>Selecione 'Sim' para que a competição apareça nos cartões de destaque.</p>
+                <ul id="topMenuList" class="settings-list"></ul>
+            </div>
+
+            <button id="saveSettingsBtn" class="save-btn">Salvar Configurações</button>
+        </div>
+    </div>
+    
+    <div class="tab-container">
+        <!-- O resto do seu conteúdo HTML (abas) permanece aqui, inalterado -->
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="openTab(event, 'tabJogo')">Editar Jogo</button>
+            <button class="tab-button" onclick="openTab(event, 'tabJogador')">Editar Jogador</button>
+            <button class="tab-button" onclick="openTab(event, 'tabEquipa')">Editar Equipa</button>
+            <button class="tab-button" onclick="openTab(event, 'tabCompeticao')">Editar Competição</button>
+            <button class="tab-button" onclick="openTab(event, 'tabPais')">Editar País</button>
+            <button class="tab-button" onclick="openTab(event, 'tabTemporada')">Editar Temporada</button>
+        </div>
+        
+        <div id="tabJogo" class="tab-content active">
+            <h3>Editar Jogo Existente</h3>
+            <div class="search-container"><div class="form-group"><label for="searchJogo">Pesquisar Jogo:</label><select id="searchJogo" placeholder="Digite para pesquisar..."></select></div></div>
+            <form id="formEditJogo"><fieldset id="fieldsetJogo" disabled>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 0.5;"> <label for="jogoGenero">Género:</label> <select id="jogoGenero" name="genero"> <option value="Men" selected>Men</option> <option value="Woman">Woman</option> </select> </div>
+                    <div class="form-group" style="flex: 2;"> <label for="jogoCompeticao">Competição:</label> <select id="jogoCompeticao" name="competicaoId" required></select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogoEquipaCasa">Equipa da Casa:</label> <select id="jogoEquipaCasa" name="equipaCasaId" required></select> </div>
+                    <div class="form-group"> <label for="jogoEquipaFora">Equipa de Fora:</label> <select id="jogoEquipaFora" name="equipaForaId" required></select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogoResultadoCasa">Resultado Casa:</label> <select id="jogoResultadoCasa" name="resultadoCasa"></select> </div>
+                    <div class="form-group"> <label for="jogoResultadoFora">Resultado Fora:</label> <select id="jogoResultadoFora" name="resultadoFora"></select> </div>
+                    <div class="form-group"> <label for="jogoResultadoFinal">Resultado Final:</label> <input type="text" id="jogoResultadoFinal" name="resultadoFinal" readonly> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogoData">Data do Jogo:</label> <input type="date" id="jogoData" name="dataJogo" required> </div>
+                    <div class="form-group"> <label for="jogoTemporada">Temporada:</label> <select id="jogoTemporada" name="temporada" required></select> </div>
+                    <div class="form-group" style="flex: 0.5;"> <label for="jogoJornada">Jornada:</label> <select id="jogoJornada" name="jornada" required></select> </div>
+                </div>
+                <div class="form-group"> <label for="jogoNomeJogo">Nome do Jogo (Automático):</label> <input type="text" id="jogoNomeJogo" name="nomeJogo" readonly> </div>
+                <div class="form-group"> <label for="jogoLinkVideo">Link Vídeo (opcional):</label> <input type="url" id="jogoLinkVideo" name="videoUrl" placeholder="https://exemplo.com/video"> </div>
+                <button type="submit" class="save-btn">Salvar Alterações</button>
+            </fieldset></form>
+        </div>
+        <div id="tabJogador" class="tab-content">
+            <h3>Editar Jogador Existente</h3>
+            <div class="search-container"><div class="form-group"><label for="searchJogador">Pesquisar Jogador:</label><select id="searchJogador" placeholder="Digite para pesquisar..."></select></div></div>
+            <form id="formEditJogador"><fieldset id="fieldsetJogador" disabled>
+                <div class="form-group"> <label for="jogadorNome">Nome do Jogador:</label> <input type="text" id="jogadorNome" name="nome" required> </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogadorNacionalidade">Nacionalidade:</label> <select id="jogadorNacionalidade" name="nacionalidadeId" required></select> </div>
+                    <div class="form-group"> <label for="jogadorPosicao">Posição:</label> <select id="jogadorPosicao" name="posicao" required> <option value="Forward">Forward</option> <option value="Midfielder">Midfielder</option> <option value="Defender">Defender</option> <option value="Goalkeeper">Goalkeeper</option> </select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogadorPePreferido">Pé Preferido:</label> <select id="jogadorPePreferido" name="pePreferido"> <option value="Direito">Direito</option> <option value="Esquerdo">Esquerdo</option> </select> </div>
+                    <div class="form-group"> <label for="jogadorNascimento">Data de Nascimento:</label> <input type="date" id="jogadorNascimento" name="dataNascimento" required> </div>
+                    <div class="form-group"> <label for="jogadorGenero">Género:</label> <select id="jogadorGenero" name="genero"> <option value="Men">Men</option> <option value="Woman">Woman</option> </select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogadorAtivo">No Ativo?</label> <select id="jogadorAtivo" name="ativo"> <option value="Yes">Yes</option> <option value="No">No</option> </select> </div>
+                    <div class="form-group" style="flex: 2;"> <label for="jogadorImagemCara">Link Imagem Cara (URL):</label> <input type="url" id="jogadorImagemCara" name="imagemCaraUrl" placeholder="https://exemplo.com/imagem.jpg"> </div>
+                </div>
+                <button type="submit" class="save-btn">Salvar Alterações</button>
+            </fieldset></form>
+        </div>
+        <div id="tabEquipa" class="tab-content">
+            <h3>Editar Equipa Existente</h3>
+            <div class="search-container"><div class="form-group"><label for="searchEquipa">Pesquisar Equipa:</label><select id="searchEquipa" placeholder="Digite para pesquisar..."></select></div></div>
+            <form id="formEditEquipa"><fieldset id="fieldsetEquipa" disabled>
+                <div class="form-group"> <label for="equipaNome">Nome da Equipa:</label> <input type="text" id="equipaNome" name="nome" required> </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="equipaPais">País:</label> <select id="equipaPais" name="paisId" required></select> </div>
+                    <div class="form-group"> <label for="equipaTipo">Equipa/Seleção:</label> <select id="equipaTipo" name="tipoEquipa"> <option value="Team">Team</option> <option value="Nacional Team">Nacional Team</option> </select> </div>
+                    <div class="form-group"> <label for="equipaGenero">Género:</label> <select id="equipaGenero" name="genero"> <option value="Men">Men</option> <option value="Woman">Woman</option> </select> </div>
+                </div>
+                <div class="form-group"> <label for="equipaCompeticoes">Competições:</label> <select id="equipaCompeticoes" name="competicoesIds" multiple required></select> </div>
+                <div class="form-group"> <label for="equipaLogoUrl">Link para logo (URL):</label> <input type="url" id="equipaLogoUrl" name="logoUrl" placeholder="https://exemplo.com/logo.png"> </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="equipaEstadio">Estádio:</label> <input type="text" id="equipaEstadio" name="estadio"> </div>
+                    <div class="form-group"> <label for="equipaCapacidade">Capacidade:</label> <input type="number" id="equipaCapacidade" name="capacidadeEstadio" min="0"> </div>
+                </div>
+                <div class="form-group"> <label for="equipaAlcunha">Alcunha:</label> <input type="text" id="equipaAlcunha" name="alcunha"> </div>
+                <button type="submit" class="save-btn">Salvar Alterações</button>
+            </fieldset></form>
+        </div>
+        <div id="tabCompeticao" class="tab-content">
+            <h3>Editar Competição Existente</h3>
+            <div class="search-container"><div class="form-group"><label for="searchCompeticao">Pesquisar Competição:</label><select id="searchCompeticao" placeholder="Digite para pesquisar..."></select></div></div>
+            <form id="formEditCompeticao"><fieldset id="fieldsetCompeticao" disabled>
+                <div class="form-group"> <label for="competicaoNome">Nome da Competição:</label> <input type="text" id="competicaoNome" name="nome" required> </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="competicaoPais">País:</label> <select id="competicaoPais" name="paisId" required></select> </div>
+                    <div class="form-group"> <label for="competicaoTipo">Tipo:</label> <select id="competicaoTipo" name="tipo" required> <option value="Doméstica Liga">Doméstica Liga</option> <option value="Doméstica Taça">Doméstica Taça</option> <option value="Internacional Clubes">Internacional Clubes</option> <option value="Internacional Taça">Internacional Taça</option> </select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="competicaoEscalao">Escalão:</label> <select id="competicaoEscalao" name="escalao"> <option value="Superior">Superior</option> <option value="Inferior">Inferior</option> </select> </div>
+                    <div class="form-group"> <label for="competicaoGenero">Género:</label> <select id="competicaoGenero" name="genero"> <option value="Men">Men</option> <option value="Woman">Woman</option> </select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="competicaoNamming">Namming:</label> <input type="text" id="competicaoNamming" name="namming"> </div>
+                    <div class="form-group"> <label for="competicaoLogoUrl">Link para logo (URL):</label> <input type="url" id="competicaoLogoUrl" name="logoUrl"> </div>
+                </div>
+                <!-- NOVOS CAMPOS ADICIONADOS AO FORMULÁRIO DE COMPETIÇÃO -->
+                <div class="form-row">
+                    <div class="form-group"> <label for="competicaoNoMenu">Aparece no Menu?</label> <select id="competicaoNoMenu" name="noMenu"><option value="No">Não</option><option value="Yes">Sim</option></select> </div>
+                    <div class="form-group"> <label for="competicaoNoTopoMenu">Aparece no Topo?</label> <select id="competicaoNoTopoMenu" name="noTopoMenu"><option value="No">Não</option><option value="Yes">Sim</option></select> </div>
+                    <div class="form-group"> <label for="competicaoPosicaoMenu">Posição no Menu</label> <input type="number" id="competicaoPosicaoMenu" name="posicaoMenu" min="1"> </div>
+                </div>
+                <button type="submit" class="save-btn">Salvar Alterações</button>
+            </fieldset></form>
+        </div>
+        <div id="tabPais" class="tab-content">
+            <h3>Editar País Existente</h3>
+            <div class="search-container"><div class="form-group"><label for="searchPais">Pesquisar País:</label><select id="searchPais" placeholder="Digite para pesquisar..."></select></div></div>
+            <form id="formEditPais"><fieldset id="fieldsetPais" disabled>
+                <div class="form-group"> <label for="paisNome">Nome do País:</label> <input type="text" id="paisNome" name="nome" required> </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="paisContinente">Continente:</label> <select id="paisContinente" name="continente" required> <option value="Europe">Europe</option> <option value="Africa">Africa</option> <option value="South America">South America</option> <option value="North America">North America</option> <option value="Asia">Asia</option> <option value="Oceania">Oceania</option> <option value="World">World</option> </select> </div>
+                    <div class="form-group"> <label for="paisBandeiraUrl">Link para bandeira (URL):</label> <input type="url" id="paisBandeiraUrl" name="bandeiraUrl"> </div>
+                </div>
+                <button type="submit" class="save-btn">Salvar Alterações</button>
+            </fieldset></form>
+        </div>
+        <div id="tabTemporada" class="tab-content">
+            <h3>Editar Temporada Existente</h3>
+            <div class="search-container"><div class="form-group"><label for="searchTemporada">Pesquisar Temporada:</label><select id="searchTemporada" placeholder="Digite para pesquisar..."></select></div></div>
+            <form id="formEditTemporada"><fieldset id="fieldsetTemporada" disabled>
+                <div class="form-group"> <label for="temporadaNome">Nome da Temporada (ex: 2024/2025):</label> <input type="text" id="temporadaNome" name="nome" required placeholder="YYYY/YYYY"> </div>
+                <button type="submit" class="save-btn">Salvar Alterações</button>
+            </fieldset></form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o", authDomain: "varsoccer-26040.firebaseapp.com", projectId: "varsoccer-26040", storageBucket: "varsoccer-26040.firebasestorage.app", messagingSenderId: "11877829810", appId: "1:11877829810:web:98f9baa131a3b88b6e8dab" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let allData = { jogos: [], jogadores: [], clubes: [], competicoes: [], paises: [], temporadas: [] };
+        let ts = {};
+        let currentlyEditing = {};
+        let isInitialized = false;
+
+        const nameMap = { jogos: 'Jogo', jogadores: 'Jogador', clubes: 'Equipa', competicoes: 'Competicao', paises: 'Pais', temporadas: 'Temporada' };
+        
+        const renderWithLogo = { option: (data, escape) => `<div><img class="option-logo" src="${escape(data.logoUrl || 'https://via.placeholder.com/20')}" alt="Logo"> <span class="option-name">${escape(data.nome)}</span></div>`, item: (data, escape) => `<div class="item"><img class="item-logo" src="${escape(data.logoUrl || 'https://via.placeholder.com/20')}" alt="Logo"> <span class="option-name">${escape(data.nome)}</span></div>` };
+        const renderSimple = { option: (data, escape) => `<div>${escape(data.nome)}</div>`, item: (data, escape) => `<div>${escape(data.nome)}</div>` };
+        const renderGameSearch = { option: (data, escape) => `<div>${escape(data.nomeJogo || `Jogo ID: ${data.id}`)}</div>`, item: (data, escape) => `<div>${escape(data.nomeJogo || `Jogo ID: ${data.id}`)}</div>` };
+
+        window.openTab = (event, tabName) => {
+            document.querySelectorAll(".tab-content").forEach(tc => tc.style.display = "none");
+            document.querySelectorAll(".tab-button").forEach(tb => tb.classList.remove("active"));
+            const tab = document.getElementById(tabName);
+            if (tab) { tab.style.display = "block"; tab.classList.add("active"); event.currentTarget.classList.add("active"); }
+        };
+
+        function populateForm(formId, data) {
+            const form = document.getElementById(formId);
+            for (const key in data) {
+                const field = form.elements[key];
+                if (field) {
+                    if (field.type === 'select-multiple') {
+                        const values = Array.isArray(data[key]) ? data[key] : [data[key]];
+                        if (ts[field.id]) { // Check if TomSelect is initialized for this element
+                            ts[field.id].setValue(values);
+                        } else {
+                           Array.from(field.options).forEach(option => { option.selected = values.includes(option.value); });
+                        }
+                    } else { field.value = data[key] ?? ''; }
+                }
+            }
+        }
+        
+        async function handleFormSubmit(e, collectionName, id) {
+            e.preventDefault();
+            if (!id) return;
+
+            const form = e.target;
+            const data = Object.fromEntries(new FormData(form).entries());
+
+            // Handle specific field types
+            if (collectionName === 'clubes') {
+                data.competicoesIds = Array.from(new FormData(form).getAll('competicoesIds'));
+            }
+            if (collectionName === 'competicoes') {
+                data.posicaoMenu = data.posicaoMenu ? parseInt(data.posicaoMenu, 10) : 99;
+            }
+            if(collectionName === 'equipa') {
+                 data.capacidadeEstadio = data.capacidadeEstadio ? parseInt(data.capacidadeEstadio, 10) : 0;
+            }
+
+            try {
+                const itemRef = doc(db, collectionName, id);
+                await updateDoc(itemRef, data);
+                const prefix = nameMap[collectionName];
+                alert(`${prefix} salvo com sucesso!`);
+                form.reset();
+                document.getElementById(`fieldset${prefix}`).disabled = true;
+                if (ts[`search${prefix}`]) ts[`search${prefix}`].clear();
+                currentlyEditing[collectionName] = null;
+                await fetchAllInitialData(); // Await the refresh
+            } catch (err) {
+                console.error("Erro ao salvar:", err);
+                alert("Erro ao salvar: " + err.message);
+            }
+        }
+        
+   function loadSelectedItem(collectionName, id) {
+            const item = allData[collectionName].find(d => d.id === id);
+            const prefix = nameMap[collectionName];
+            if (item) {
+                currentlyEditing[collectionName] = id;
+                const fieldset = document.getElementById(`fieldset${prefix}`);
+                const form = document.getElementById(`formEdit${prefix}`);
+                
+                fieldset.disabled = false;
+                populateForm(form.id, item);
+
+                // Special handling for TomSelect fields after populating
+                if (collectionName === 'jogos') {
+                    // 1. FORÇA a atualização da lista de competições com base no gênero do jogo selecionado.
+                    populateCompetitionsForJogo(); 
+                    
+                    // 2. AGORA, com a lista correta, define o valor.
+                    ts.jogoCompeticao.setValue(item.competicaoId, true);
+                    
+                    // O restante continua como estava
+                    populateEquipasForJogo();
+                    ts.jogoEquipaCasa.setValue(item.equipaCasaId, true);
+                    ts.jogoEquipaFora.setValue(item.equipaForaId, true);
+                }
+                 if (collectionName === 'clubes') {
+                    if(ts.equipaCompeticoes) ts.equipaCompeticoes.setValue(item.competicoesIds || []);
+                }
+            }
+        }
+
+        // --- LÓGICA DO MODAL DE CONFIGURAÇÕES ---
+
+        const settingsModal = document.getElementById('settingsModal');
+        const openSettingsBtn = document.getElementById('openSettingsBtn');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        const menuOrderList = document.getElementById('menuOrderList');
+        const topMenuList = document.getElementById('topMenuList');
+
+        openSettingsBtn.onclick = () => {
+            populateSettingsModal();
+            settingsModal.style.display = 'block';
+        };
+        closeSettingsBtn.onclick = () => settingsModal.style.display = 'none';
+        window.onclick = (event) => {
+            if (event.target == settingsModal) {
+                settingsModal.style.display = 'none';
+            }
+        };
+
+        function populateSettingsModal() {
+            menuOrderList.innerHTML = '';
+            topMenuList.innerHTML = '';
+
+            // Clone and sort for menu order list
+            const sortedForMenu = [...allData.competicoes].sort((a, b) => (a.posicaoMenu || 99) - (b.posicaoMenu || 99));
+
+            sortedForMenu.forEach(comp => {
+                // Populate Menu Order List
+                const liMenu = document.createElement('li');
+                liMenu.dataset.id = comp.id;
+                liMenu.innerHTML = `
+                    <button class="arrow-btn" data-dir="up">▲</button>
+                    <button class="arrow-btn" data-dir="down">▼</button>
+                    <span>${comp.nome}</span>
+                    <select class="menu-toggle">
+                        <option value="Yes" ${comp.noMenu === 'Yes' ? 'selected' : ''}>Sim</option>
+                        <option value="No" ${comp.noMenu !== 'Yes' ? 'selected' : ''}>Não</option>
+                    </select>
+                `;
+                menuOrderList.appendChild(liMenu);
+                
+                // Populate Top Menu (Pick Cards) List
+                 const liTop = document.createElement('li');
+                 liTop.dataset.id = comp.id;
+                 liTop.innerHTML = `
+                    <span>${comp.nome}</span>
+                    <select class="top-menu-toggle">
+                        <option value="Yes" ${comp.noTopoMenu === 'Yes' ? 'selected' : ''}>Sim</option>
+                        <option value="No" ${comp.noTopoMenu !== 'Yes' ? 'selected' : ''}>Não</option>
+                    </select>
+                `;
+                topMenuList.appendChild(liTop);
+            });
+        }
+
+        menuOrderList.addEventListener('click', (e) => {
+            if (e.target.matches('.arrow-btn')) {
+                const li = e.target.closest('li');
+                const dir = e.target.dataset.dir;
+                if (dir === 'up' && li.previousElementSibling) {
+                    li.parentNode.insertBefore(li, li.previousElementSibling);
+                } else if (dir === 'down' && li.nextElementSibling) {
+                    li.parentNode.insertBefore(li.nextElementSibling, li);
+                }
+            }
+        });
+
+        saveSettingsBtn.addEventListener('click', async () => {
+            const batch = writeBatch(db);
+            const updatesMap = new Map();
+
+            // Process menu order and visibility
+            menuOrderList.querySelectorAll('li').forEach((li, index) => {
+                const id = li.dataset.id;
+                const noMenu = li.querySelector('.menu-toggle').value;
+                updatesMap.set(id, { ...updatesMap.get(id), noMenu: noMenu, posicaoMenu: index + 1 });
+            });
+
+            // Process top menu visibility
+            topMenuList.querySelectorAll('li').forEach(li => {
+                const id = li.dataset.id;
+                const noTopoMenu = li.querySelector('.top-menu-toggle').value;
+                updatesMap.set(id, { ...updatesMap.get(id), noTopoMenu: noTopoMenu });
+            });
+            
+            // Add updates to the batch
+            updatesMap.forEach((data, id) => {
+                const docRef = doc(db, 'competicoes', id);
+                batch.update(docRef, data);
+            });
+
+            try {
+                await batch.commit();
+                alert('Configurações salvas com sucesso!');
+                settingsModal.style.display = 'none';
+                await fetchAllInitialData(); // Refresh all data
+            } catch (err) {
+                console.error("Erro ao salvar configurações:", err);
+                alert('Erro ao salvar configurações: ' + err.message);
+            }
+        });
+
+
+        // --- FIM DA LÓGICA DO MODAL ---
+
+        function populateAllFormDropdowns() {
+             const temporadaSelect = document.getElementById('jogoTemporada');
+             temporadaSelect.innerHTML = '';
+             allData.temporadas.forEach(s => { temporadaSelect.innerHTML += `<option value="${s.nome}">${s.nome}</option>`; });
+             if(document.getElementById('jogoResultadoCasa').innerHTML === '') {
+                const resCasa = document.getElementById('jogoResultadoCasa'), resFora = document.getElementById('jogoResultadoFora'), jornada = document.getElementById('jogoJornada');
+                for(let i=0; i<=9; i++) { resCasa.innerHTML += `<option value="${i}">${i}</option>`; resFora.innerHTML += `<option value="${i}">${i}</option>`; }
+                for(let i=1; i<=40; i++) { jornada.innerHTML += `<option value="${i}">${i}</option>`; }
+             }
+             const paisesSelects = [document.getElementById('jogadorNacionalidade'), document.getElementById('equipaPais'), document.getElementById('competicaoPais')];
+             paisesSelects.forEach(sel => {
+                sel.innerHTML = ''; allData.paises.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.nome}</option>`; });
+             });
+             
+             // Usa TomSelect para as competições da equipa
+             if(ts.equipaCompeticoes) {
+                ts.equipaCompeticoes.clearOptions();
+                ts.equipaCompeticoes.addOptions(allData.competicoes);
+             }
+        }
+        function populateCompetitionsForJogo() {
+            if (!ts.jogoCompeticao) return;
+            const gender = document.getElementById('jogoGenero').value;
+            const filtered = allData.competicoes.filter(c => c.genero === gender);
+            ts.jogoCompeticao.clearOptions(); ts.jogoCompeticao.addOptions(filtered);
+        }
+        function populateEquipasForJogo() {
+            if (!ts.jogoCompeticao || !ts.jogoEquipaCasa) return;
+            const gender = document.getElementById('jogoGenero').value;
+            const competicaoId = ts.jogoCompeticao.getValue();
+            if(!competicaoId) return;
+            const filtered = allData.clubes.filter(c => c.genero === gender && c.competicoesIds?.includes(competicaoId));
+            ts.jogoEquipaCasa.clearOptions(); ts.jogoEquipaCasa.addOptions(filtered);
+            ts.jogoEquipaFora.clearOptions(); ts.jogoEquipaFora.addOptions(filtered);
+        }
+       function updateNomeJogo() {
+            const nomeJogoEl = document.getElementById('jogoNomeJogo'), 
+                  dataEl = document.getElementById('jogoData'),
+                  resultadoFinalEl = document.getElementById('jogoResultadoFinal'); // 1. Adiciona uma referência ao campo de resultado final.
+
+            const casaItem = ts.jogoEquipaCasa.options[ts.jogoEquipaCasa.getValue()];
+            const foraItem = ts.jogoEquipaFora.options[ts.jogoEquipaFora.getValue()];
+
+            // Se as equipas não estiverem selecionadas, limpa os campos e sai
+            if(!casaItem || !foraItem || !dataEl.value) { 
+                nomeJogoEl.value = '';
+                resultadoFinalEl.value = '';
+                return;
+            }
+            
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
+            
+            const jogoDate = new Date(dataEl.value + 'T00:00:00');
+            const resFinal = jogoDate >= hoje ? 'X' : `${document.getElementById('jogoResultadoCasa').value}-${document.getElementById('jogoResultadoFora').value}`;
+            
+            // 2. A LINHA QUE CORRIGE O BUG: Atualiza o campo "Resultado Final".
+            resultadoFinalEl.value = resFinal;
+
+            const [y,m,d] = dataEl.value.split('-');
+            nomeJogoEl.value = `${casaItem.nome} ${resFinal} ${foraItem.nome} - ${d}/${m}/${y}`;
+        }
+        
+        function setupEventListeners() {
+            ts.searchJogo.on('change', (id) => loadSelectedItem('jogos', id));
+            ts.searchJogador.on('change', (id) => loadSelectedItem('jogadores', id));
+            ts.searchEquipa.on('change', (id) => loadSelectedItem('clubes', id));
+            ts.searchCompeticao.on('change', (id) => loadSelectedItem('competicoes', id));
+            ts.searchPais.on('change', (id) => loadSelectedItem('paises', id));
+            ts.searchTemporada.on('change', (id) => loadSelectedItem('temporadas', id));
+            
+            ts.jogoCompeticao.on('change', populateEquipasForJogo);
+            ts.jogoEquipaCasa.on('change', updateNomeJogo);
+            ts.jogoEquipaFora.on('change', updateNomeJogo);
+
+            document.getElementById('jogoGenero').addEventListener('change', populateCompetitionsForJogo);
+            [ document.getElementById('jogoResultadoCasa'), document.getElementById('jogoResultadoFora'), document.getElementById('jogoData') ].forEach(el => el.addEventListener('change', updateNomeJogo));
+            
+            document.getElementById('formEditJogo').addEventListener('submit', (e) => handleFormSubmit(e, 'jogos', currentlyEditing.jogos));
+            document.getElementById('formEditJogador').addEventListener('submit', (e) => handleFormSubmit(e, 'jogadores', currentlyEditing.jogadores));
+            document.getElementById('formEditEquipa').addEventListener('submit', (e) => handleFormSubmit(e, 'clubes', currentlyEditing.clubes));
+            document.getElementById('formEditCompeticao').addEventListener('submit', (e) => handleFormSubmit(e, 'competicoes', currentlyEditing.competicoes));
+            document.getElementById('formEditPais').addEventListener('submit', (e) => handleFormSubmit(e, 'paises', currentlyEditing.paises));
+            document.getElementById('formEditTemporada').addEventListener('submit', (e) => handleFormSubmit(e, 'temporadas', currentlyEditing.temporadas));
+        }
+ async function fetchAllInitialData() {
+            try {
+                const snaps = await Promise.all([
+                    getDocs(query(collection(db, "jogos"), orderBy("dataJogo", "desc"))),
+                    getDocs(query(collection(db, "jogadores"), orderBy("nome"))),
+                    getDocs(query(collection(db, "clubes"), orderBy("nome"))),
+                    getDocs(query(collection(db, "competicoes"), orderBy("nome"))),
+                    getDocs(query(collection(db, "paises"), orderBy("nome"))),
+                    getDocs(query(collection(db, "temporadas"), orderBy("nome", "desc")))
+                ]);
+                allData.jogos = snaps[0].docs.map(d => ({id:d.id, ...d.data()}));
+                allData.jogadores = snaps[1].docs.map(d => ({id:d.id, ...d.data()}));
+                allData.clubes = snaps[2].docs.map(d => ({id:d.id, ...d.data()}));
+                allData.competicoes = snaps[3].docs.map(d => ({id:d.id, ...d.data()}));
+                allData.paises = snaps[4].docs.map(d => ({id:d.id, ...d.data()}));
+                allData.temporadas = snaps[5].docs.map(d => ({id:d.id, ...d.data()}));
+                
+                if (!isInitialized) {
+                    ts.searchJogo = new TomSelect('#searchJogo', { render: renderGameSearch, valueField: 'id', labelField: 'nomeJogo', searchField: ['nomeJogo'] });
+                    ts.searchJogador = new TomSelect('#searchJogador', { render: renderSimple, valueField: 'id', labelField: 'nome', searchField: ['nome'] });
+                    ts.searchEquipa = new TomSelect('#searchEquipa', { render: renderWithLogo, valueField: 'id', labelField: 'nome', searchField: ['nome'] });
+                    ts.searchCompeticao = new TomSelect('#searchCompeticao', { render: renderWithLogo, valueField: 'id', labelField: 'nome', searchField: ['nome'] });
+                    ts.searchPais = new TomSelect('#searchPais', { render: renderSimple, valueField: 'id', labelField: 'nome', searchField: ['nome'] });
+                    ts.searchTemporada = new TomSelect('#searchTemporada', { render: renderSimple, valueField: 'id', labelField: 'nome', searchField: ['nome'] });
+
+                    const tomSelectOptions = { valueField: 'id', labelField: 'nome', searchField: ['nome'] };
+                    ts.jogoCompeticao = new TomSelect('#jogoCompeticao', { ...tomSelectOptions, render: renderWithLogo });
+                    ts.jogoEquipaCasa = new TomSelect('#jogoEquipaCasa', { ...tomSelectOptions, render: renderWithLogo });
+                    ts.jogoEquipaFora = new TomSelect('#jogoEquipaFora', { ...tomSelectOptions, render: renderWithLogo });
+                    
+                    // --- INÍCIO DA MODIFICAÇÃO ---
+                    // Altera a inicialização do TomSelect para o campo de competições da equipa, usando o plugin de checkboxes.
+                    ts.equipaCompeticoes = new TomSelect('#equipaCompeticoes', {
+                        plugins: ['checkbox_options'],
+                        render: renderWithLogo,
+                        valueField: 'id',
+                        labelField: 'nome',
+                        searchField: ['nome'],
+                        placeholder: 'Selecione uma ou mais competições...',
+                        closeAfterSelect: false // Melhora a experiência para múltiplas seleções
+                    });
+                    // --- FIM DA MODIFICAÇÃO ---
+
+                    setupEventListeners();
+                    isInitialized = true;
+                }
+
+                ts.searchJogo.clearOptions(); ts.searchJogo.addOptions(allData.jogos);
+                ts.searchJogador.clearOptions(); ts.searchJogador.addOptions(allData.jogadores);
+                ts.searchEquipa.clearOptions(); ts.searchEquipa.addOptions(allData.clubes);
+                ts.searchCompeticao.clearOptions(); ts.searchCompeticao.addOptions(allData.competicoes);
+                ts.searchPais.clearOptions(); ts.searchPais.addOptions(allData.paises);
+                ts.searchTemporada.clearOptions(); ts.searchTemporada.addOptions(allData.temporadas);
+                
+                populateAllFormDropdowns();
+            } catch (error) { console.error("Error fetching data: ", error); }
+        }
+        
+        document.addEventListener('DOMContentLoaded', fetchAllInitialData);
+    </script>
+</body>
+</html>
