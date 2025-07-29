@@ -231,7 +231,7 @@
         
         function renderLatestFive(games) {
             const grid = document.getElementById('latest-games-grid');
-            if (!games || games.length === 0) { grid.innerHTML = '<p>Nenhum jogo recente encontrado para este filtro.</p>'; return; }
+            if (!games || games.length === 0) { grid.innerHTML = '<p>No recent matches found for this filter.</p>'; return; }
             grid.innerHTML = '';
             const sortedGames = [...games].sort((a, b) => parseDate(b.dataJogo) - parseDate(a.dataJogo)).slice(0, 5);
             sortedGames.forEach(game => {
@@ -351,35 +351,39 @@
         /**
          * Função principal que busca os jogos, aplica o filtro, e atualiza a UI.
          */
-        async function refreshGameDataAndUpdateUI() {
+       async function refreshGameDataAndUpdateUI() {
             try {
-                // 1. Buscar os jogos mais recentes do Firebase.
-                const gamesQuery = query(collection(db, 'jogos'), orderBy("dataJogo", "desc"), limit(100));
-                const snapshot = await getDocs(gamesQuery);
-                const rawGames = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-                // 2. Aplicar a lógica de filtragem para remover jogos futuros sem resultado.
+                // 1. Definir o limite do dia de hoje para a consulta.
+                // Isso garante que só pegaremos jogos de hoje ou do passado.
                 const now = new Date();
-                now.setHours(0, 0, 0, 0); // Comparar apenas com o início do dia.
+                const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+                const endOfTodayISO = endOfToday.toISOString().slice(0, 10); // Formato YYYY-MM-DD
 
-                allFetchedGames = rawGames.filter(game => {
-                    const gameDate = parseDate(game.dataJogo);
-                    if (isNaN(gameDate.getTime())) return true; // Manter jogo se a data for inválida.
+                // 2. Buscar os 100 jogos mais recentes DO PASSADO E DE HOJE.
+                // A cláusula 'where' é a correção chave.
+                const gamesQuery = query(
+                    collection(db, 'jogos'), 
+                    where("dataJogo", "<=", endOfTodayISO), // <-- A CORREÇÃO ESTÁ AQUI
+                    orderBy("dataJogo", "desc"), 
+                    limit(100)
+                );
+                
+                const snapshot = await getDocs(gamesQuery);
 
-                    const isFutureGame = gameDate > now;
-                    const hasInvalidResult = !game.resultadoFinal || game.resultadoFinal.trim() === "" || game.resultadoFinal.toUpperCase() === 'X';
-                    
-                    // Manter o jogo se a condição de exclusão (futuro E resultado inválido) NÃO for verdadeira.
-                    return !(isFutureGame && hasInvalidResult);
-                });
+                // Como a consulta já filtrou os jogos futuros, não precisamos mais do filtro complexo aqui.
+                // A lista de jogos do snapshot já é a lista correta.
+                allFetchedGames = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                // 3. Redesenhar os componentes da UI com a lista de jogos já filtrada.
+                // 3. Redesenhar os componentes da UI com a lista de jogos correta.
                 renderHighlightsFilters();
                 renderLatestFive(allFetchedGames);
                 renderFullList(allFetchedGames);
                 setupFilters(allFetchedGames);
             } catch(e) { 
                 console.error("Error refreshing game data:", e);
+                // Informar o usuário sobre o erro no UI, se apropriado
+                document.getElementById('latest-games-grid').innerHTML = '<p>Error loading matches.</p>';
+                document.getElementById('full-games-list').innerHTML = '<p>Error loading matches.</p>';
             }
         }
 
