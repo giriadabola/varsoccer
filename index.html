@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competições de Futebol</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; }
+        .page-container { display: flex; flex-direction: column; height: 100vh; }
+        
+        header { 
+            padding: 10px 20px; 
+            background-color: #ffffff; 
+            border-bottom: 1px solid #dddfe2; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            position: relative;
+            z-index: 20;
+        }
+        
+        .logo-container { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; flex-shrink: 0; }
+        .logo-image { height: 40px; width: 40px; }
+        .logo-name { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
+
+        #global-search-container { position: relative; flex-grow: 1; max-width: 600px; margin: 0 20px; }
+        .search-wrapper-gradient { padding: 2px; border-radius: 20px; background: linear-gradient(90deg, #4285F4, #34A853, #FBBC05, #EA4335, #4285F4); background-size: 200% 200%; animation: gradient-animation 4s ease infinite; transition: box-shadow 0.2s; }
+        .search-wrapper-gradient:focus-within { box-shadow: 0 0 8px rgba(0,0,0,0.2); }
+        @keyframes gradient-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        #global-search-input { width: 100%; border: none; padding: 8px 15px; font-size: 1rem; border-radius: 18px; background-color: #f0f2f5; }
+        #global-search-input:focus { outline: none; background-color: #fff; }
+        #search-results-panel { display: none; position: absolute; top: 110%; left: 0; width: 100%; background-color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 70vh; overflow-y: auto; padding: 10px; }
+        .search-results-section h3 { font-size: 0.8rem; text-transform: uppercase; color: #606770; padding: 5px 10px; margin-bottom: 5px; }
+        .search-result-item { display: block; text-decoration: none; color: inherit; padding: 10px; border-radius: 8px; margin-bottom: 8px; position: relative; border: 1px solid transparent; transition: background-color 0.2s; }
+        .result-type-comp { background-color: #f0f5ff; border-color: #dde8ff; }
+        .result-type-team { background-color: #f0fff5; border-color: #ddffe8; }
+        .search-result-item:hover { background-color: #e9ecef; }
+        .result-header { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; }
+        .result-logo { width: 32px; height: 32px; object-fit: contain; }
+        .result-name-container .main-name { font-weight: 600; }
+        .result-name-container .sub-name { font-size: 0.8rem; color: #606770; }
+        .result-flag { position: absolute; top: 8px; left: 8px; width: 20px; height: 15px; object-fit: cover; border-radius: 2px; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
+        .result-pickcards-container { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
+        .result-pickcard { flex: 1; display: flex; align-items: center; justify-content: center; padding: 5px; background-color: #fff; border-radius: 6px; border: 1px solid #ddd; text-decoration: none; }
+        .result-pickcard:hover { border-color: #007bff; }
+        .result-pickcard img { width: 24px; height: 24px; object-fit: contain; }
+        .result-pickcard span { font-size: 0.8rem; font-weight: bold; margin: 0 5px; }
+
+        /* (Resto do CSS continua igual) */
+        .content-wrapper { display: flex; flex-grow: 1; overflow: hidden; }
+        .sidebar { width: 280px; flex-shrink: 0; background-color: #ffffff; padding: 15px; overflow-y: auto; border-right: 1px solid #dddfe2; display: flex; flex-direction: column;}
+        #sidebar-search-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; }
+        #competition-list { flex-grow: 1; overflow-y: auto; }
+        .competition-item { display: flex; align-items: center; padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; text-decoration: none; color: inherit; transition: background-color 0.2s ease-in-out; }
+        .competition-item:hover { background-color: #f0f2f5; }
+        .competition-logo { width: 24px; height: 24px; object-fit: contain; margin-right: 10px; }
+        .competition-name { font-weight: 500; font-size: 0.85rem; }
+        .main-content-scroll-container { flex-grow: 1; overflow-y: auto; background-color: #f9f9f9; }
+        .main-content { padding: 20px; }
+        .main-content h2 { font-size: 1.5rem; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .loading-message { color: #888; }
+        #highlights-filter-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; margin-top: -5px; }
+        .highlight-filter-btn { padding: 8px 16px; border: 1px solid #ccc; border-radius: 16px; background-color: #fff; cursor: pointer; font-weight: 500; font-size: 0.85rem; transition: all 0.2s ease; }
+        .highlight-filter-btn:hover { background-color: #e4e6eb; border-color: #bbb; }
+        .highlight-filter-btn.active { background-color: #1877f2 !important; color: #fff !important; border-color: #1877f2 !important; }
+        #latest-games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .game-card { background-color: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative; display: flex; flex-direction: column; justify-content: center; text-decoration: none; color: inherit; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .game-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .game-card-comp-logo { position: absolute; top: 10px; left: 10px; height: 24px; width: 24px; object-fit: contain; background: rgba(255,255,255,0.7); border-radius: 50%; padding: 2px;}
+        .game-card-jornada { position: absolute; top: 10px; right: 10px; background-color: #f0f2f5; color: #606770; font-size: 0.7rem; padding: 3px 7px; border-radius: 6px; font-weight: bold; }
+        .game-card-content { display: flex; align-items: center; justify-content: space-around; width: 100%; margin-top: 15px; }
+        .game-card-team img { height: 45px; width: 45px; object-fit: contain; }
+        .game-card-result { font-size: 1.5rem; font-weight: bold; margin: 0 10px; }
+        .list-wrapper { background-color: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative; }
+        #filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; position: sticky; top: 0; z-index: 10; background-color: #ffffff; padding-bottom: 20px; border-bottom: 1px solid #eee; margin: -20px -20px 0 -20px; padding: 15px 20px; width: calc(100% + 40px); border-radius: 12px 12px 0 0; }
+        #search-input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; flex-grow: 1; min-width: 200px; }
+        .filter-btn, #date-input { padding: 10px 15px; background-color: #f0f2f5; color: #333; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
+        .filter-btn:hover, #date-input:hover { background-color: #e4e6eb; border-color: #bbb; }
+        #full-games-list { padding-top: 20px; }
+        .date-header { font-size: 1.1rem; font-weight: bold; color: #333; margin-top: 15px; margin-bottom: 5px; }
+        .match-list-item { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px; background-color: #fff; padding: 8px 12px; border-radius: 8px; border: 1px solid #eee; text-decoration: none; color: inherit; }
+        .match-list-item:hover { background-color: #f9f9f9; border-color: #ccc; }
+        .match-list-item .list-item-flag { height: 20px; width: 28px; object-fit: cover; border: 1px solid #eee; }
+        .match-list-item .game-name { font-size: 0.9rem; font-weight: 500; }
+        .game-name .competition-subtitle { font-size: 0.75rem; font-style: italic; font-weight: 400; color: #555; margin-left: 8px; }
+        .match-list-item .game-jornada { font-size: 0.8rem; color: #666; text-align: right; }
+        .result-name-container .sub-name { font-size: 0.8rem; font-style: italic; color: #606770; }
+        .main-name .sub-name { font-size: 0.9em; font-style: italic; font-weight: 400; color: #606770; margin-left: 8px; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <header>
+            <a href="index.html" class="logo-container">
+                <img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image">
+                <span class="logo-name">VARSOCCER</span>
+            </a>
+            <div id="global-search-container">
+                <div class="search-wrapper-gradient"><input type="text" id="global-search-input" placeholder="Search Teams or Competitions..."></div>
+                <div id="search-results-panel"></div>
+            </div>
+            <div style="width: 200px; flex-shrink: 0;"></div>
+        </header>
+
+        <div class="content-wrapper">
+            <nav class="sidebar">
+                <input type="text" id="sidebar-search-input" placeholder="Search competition...">
+                <div id="competition-list"><p class="loading-message">Loading...</p></div>
+            </nav>
+            <div class="main-content-scroll-container">
+                <main class="main-content">
+                    <h2>Latest Highlights</h2>
+                    <div id="highlights-filter-container"></div>
+                    <div id="latest-games-grid"><p class="loading-message">Latest matches...</p></div>
+                    <section id="all-games-section">
+                        <h2>Latest Matches</h2>
+                        <div class="list-wrapper">
+                            <div id="filter-bar">
+                                <input type="text" id="search-input" placeholder="Search your Match or Team">
+                                <button id="all-btn" class="filter-btn">ALL</button>
+                                <button id="yesterday-btn" class="filter-btn">YESTERDAY (0)</button>
+                                <button id="today-btn" class="filter-btn">TODAY (0)</button>
+                                <a href="calendar.html" class="filter-btn" style="text-decoration: none;">Choose a date...</a>
+                            </div>
+                            <div id="full-games-list"><p class="loading-message">Loading matches...</p></div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o", authDomain: "varsoccer-26040.firebaseapp.com", projectId: "varsoccer-26040", storageBucket: "varsoccer-26040.firebasestorage.app", messagingSenderId: "11877829810", appId: "1:11877829810:web:98f9baa131a3b88b6e8dab" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        let clubsMap = new Map();
+        let competitionsMap = new Map();
+        let countriesMap = new Map();
+        let allFetchedGames = [];
+
+        // --- FUNÇÕES AUXILIARES ---
+        const formatDate = (date) => new Date(date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        
+        /**
+         * Função auxiliar para converter uma string de data (DD/MM/YYYY ou YYYY-MM-DD) para um objeto Date.
+         */
+        function parseDate(dateString) {
+            if (!dateString) return new Date(null);
+            if (dateString.includes('-')) { return new Date(dateString); }
+            const parts = dateString.split('/');
+            if (parts.length === 3) { return new Date(parts[2], parts[1] - 1, parts[0]); }
+            return new Date(null);
+        }
+        
+        async function fetchAndStoreClubs() { if (clubsMap.size > 0) return; const s = await getDocs(collection(db, 'clubes')); s.forEach(d => clubsMap.set(d.id, { id: d.id, ...d.data() })); }
+        async function fetchAndStoreCompetitions() { competitionsMap.clear(); const s = await getDocs(query(collection(db, 'competicoes'), orderBy('nome'))); s.forEach(d => competitionsMap.set(d.id, { id: d.id, ...d.data() })); }
+        async function fetchAndStoreCountries() { if (countriesMap.size > 0) return; const s = await getDocs(collection(db, 'paises')); s.forEach(d => countriesMap.set(d.id, d.data())); }
+        
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
+        async function fetchAndRenderSidebar() {
+            const listElement = document.getElementById('competition-list');
+            try {
+                const q = query(collection(db, 'competicoes'), where("noMenu", "==", "Yes"), orderBy("posicaoMenu"));
+                const snapshot = await getDocs(q);
+                listElement.innerHTML = !snapshot.empty ? '' : '<p>Nenhuma competição encontrada.</p>';
+                snapshot.forEach(doc => {
+                    const comp = doc.data();
+                    listElement.innerHTML += `<a href="competition.html?id=${doc.id}" class="competition-item" data-namming="${comp.namming || ''}"><img src="${comp.logoUrl}" class="competition-logo"><span class="competition-name">${comp.nome}</span></a>`;
+                });
+            } catch (error) { console.error("Error loading sidebar:", error); listElement.innerHTML = '<p>Error loading.</p>'; }
+        }
+
+        function setupSidebarFilter() {
+            document.getElementById('sidebar-search-input').addEventListener('keyup', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                document.querySelectorAll('.competition-item').forEach(item => {
+                    const name = item.querySelector('.competition-name').textContent.toLowerCase();
+                    const namming = item.dataset.namming.toLowerCase();
+                    const isVisible = name.includes(searchTerm) || (namming && namming.includes(searchTerm));
+                    item.style.display = isVisible ? 'flex' : 'none';
+                });
+            });
+        }
+
+        function renderHighlightsFilters() {
+            const container = document.getElementById('highlights-filter-container');
+            const grid = document.getElementById('latest-games-grid');
+            container.innerHTML = '';
+            const buttonColors = ['#0C1EA5', '#5F9EA0', '#C45903', '#3D722B', '#6f42c1', '#dc3545', '#20c997', '#d63384', '#6610f2', '#8B4513', '#495057'];
+            const competitionsForFilter = Array.from(competitionsMap.values()).filter(comp => comp.noTopoMenu === 'Yes');
+            if (competitionsForFilter.length === 0) { container.style.display = 'none'; return; }
+            container.style.display = 'flex';
+            container.innerHTML = `<button class="highlight-filter-btn active" data-comp-id="all">All</button>`;
+            competitionsForFilter.forEach((comp, index) => {
+                const color = buttonColors[index % buttonColors.length];
+                container.innerHTML += `<button class="highlight-filter-btn" data-comp-id="${comp.id}" style="background-color: ${color}; border-color: ${color}; color: white;">${comp.nome}</button>`;
+            });
+            container.addEventListener('click', async (e) => {
+                if (e.target.tagName !== 'BUTTON') return;
+                const currentActive = container.querySelector('.highlight-filter-btn.active');
+                if (currentActive) { currentActive.classList.remove('active'); }
+                e.target.classList.add('active');
+                const compId = e.target.dataset.compId;
+                if (compId === 'all') { renderLatestFive(allFetchedGames); } 
+                else {
+                    grid.innerHTML = '<p class="loading-message">Loading competition matches...</p>';
+                    try {
+                        const q = query(collection(db, 'jogos'), where("competicaoId", "==", compId), orderBy("dataJogo", "desc"), limit(5));
+                        const snapshot = await getDocs(q);
+                        const competitionGames = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        // A mesma lógica de filtro precisa ser aplicada aqui também para consistência
+                        const now = new Date();
+                        now.setHours(0, 0, 0, 0);
+                        const filteredCompetitionGames = competitionGames.filter(game => {
+                            const gameDate = parseDate(game.dataJogo);
+                            if (isNaN(gameDate.getTime())) return true;
+                            const isFutureGame = gameDate > now;
+                            const hasInvalidResult = !game.resultadoFinal || game.resultadoFinal.trim() === "" || game.resultadoFinal.toUpperCase() === 'X';
+                            return !(isFutureGame && hasInvalidResult);
+                        });
+                        renderLatestFive(filteredCompetitionGames);
+                    } catch (error) { console.error("Erro ao buscar jogos da competição:", error); grid.innerHTML = '<p>Error loading matches.</p>'; }
+                }
+            });
+        }
+        
+        function renderLatestFive(games) {
+            const grid = document.getElementById('latest-games-grid');
+            if (!games || games.length === 0) { grid.innerHTML = '<p>Nenhum jogo recente encontrado para este filtro.</p>'; return; }
+            grid.innerHTML = '';
+            const sortedGames = [...games].sort((a, b) => parseDate(b.dataJogo) - parseDate(a.dataJogo)).slice(0, 5);
+            sortedGames.forEach(game => {
+                const comp = competitionsMap.get(game.competicaoId);
+                const home = clubsMap.get(game.equipaCasaId);
+                const away = clubsMap.get(game.equipaForaId);
+                if (!comp || !home || !away) return;
+                grid.innerHTML += `<a href="game.html?id=${game.id}" class="game-card"><img src="${comp.logoUrl}" class="game-card-comp-logo" title="${comp.nome}"><div class="game-card-jornada">Round ${game.jornada}</div><div class="game-card-content"><div class="game-card-team"><img src="${home.logoUrl}" title="${home.nome}"></div><span class="game-card-result">${game.resultadoFinal || 'VS'}</span><div class="game-card-team"><img src="${away.logoUrl}" title="${away.nome}"></div></div></a>`;
+            });
+        }
+        
+        function renderFullList(games) {
+            const listContainer = document.getElementById('full-games-list');
+            if (games.length === 0) { listContainer.innerHTML = '<p>Nenhum jogo encontrado.</p>'; return; }
+            listContainer.innerHTML = '';
+            const gamesByDate = games.reduce((acc, game) => { 
+                const dateKey = formatDate(game.dataJogo); 
+                if (!acc[dateKey]) acc[dateKey] = []; 
+                acc[dateKey].push(game); 
+                return acc; 
+            }, {});
+            Object.keys(gamesByDate).sort((a, b) => parseDate(b) - parseDate(a)).forEach(date => {
+                listContainer.innerHTML += `<h3 class="date-header">${date}</h3>`;
+                gamesByDate[date].sort((a, b) => a.nomeJogo.localeCompare(b.nomeJogo)).forEach(game => {
+                    const comp = competitionsMap.get(game.competicaoId);
+                    const country = comp ? countriesMap.get(comp.paisId) : null;
+                    let competitionNameSuffix = (comp && comp.escalao === 'Inferior') ? ` <span class="competition-subtitle">(${comp.nome})</span>` : '';
+                    listContainer.innerHTML += `<a href="game.html?id=${game.id}" class="match-list-item"><img src="${country?.bandeiraUrl || ''}" class="list-item-flag" title="${country?.nome || ''}"><span class="game-name">${game.nomeJogo}${competitionNameSuffix}</span><span class="game-jornada">Round ${game.jornada}</span></a>`;
+                });
+            });
+        }
+        
+        function setupFilters(games) {
+            const searchInput = document.getElementById('search-input');
+            const [allBtn, yesterdayBtn, todayBtn] = [document.getElementById('all-btn'), document.getElementById('yesterday-btn'), document.getElementById('today-btn')];
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().slice(0, 10);
+            todayBtn.textContent = `TODAY (${games.filter(g => g.dataJogo.startsWith(todayStr)).length})`;
+            yesterdayBtn.textContent = `YESTERDAY (${games.filter(g => g.dataJogo.startsWith(yesterdayStr)).length})`;
+            const applyFilter = () => {
+                const searchTerm = searchInput.value.toLowerCase();
+                const filteredGames = games.filter(g => {
+                    const home = clubsMap.get(g.equipaCasaId)?.nome.toLowerCase() || '';
+                    const away = clubsMap.get(g.equipaForaId)?.nome.toLowerCase() || '';
+                    return g.nomeJogo.toLowerCase().includes(searchTerm) || home.includes(searchTerm) || away.includes(searchTerm);
+                });
+                renderFullList(filteredGames);
+            };
+            searchInput.addEventListener('keyup', applyFilter);
+            allBtn.addEventListener('click', () => { searchInput.value = ''; renderFullList(games); });
+            todayBtn.addEventListener('click', () => { searchInput.value = ''; renderFullList(games.filter(g => g.dataJogo.startsWith(todayStr))); });
+            yesterdayBtn.addEventListener('click', () => { searchInput.value = ''; renderFullList(games.filter(g => g.dataJogo.startsWith(yesterdayStr))); });
+        }
+
+        // --- FUNÇÕES DA PESQUISA GLOBAL ---
+        async function fetchLastGamesForTeam(teamId, limitNum = 3) { try{const e=query(collection(db,"jogos"),where("equipaCasaId","==",teamId)),t=query(collection(db,"jogos"),where("equipaForaId","==",teamId)),[a,n]=await Promise.all([getDocs(e),getDocs(t)]),o=a.docs.map(e=>({id:e.id,...e.data()})),r=n.docs.map(e=>({id:e.id,...e.data()}));return Array.from(new Map([...o,...r].map(e=>[e.id,e])).values()).sort((e,t)=>new Date(t.dataJogo)-new Date(e.dataJogo)).slice(0,limitNum)}catch(e){return console.error(`Erro ao buscar jogos para a equipa ${teamId}:`,e),[]} }
+        function findRecentTeamsForCompetition(compId, limit = 3) { const r=allFetchedGames.filter(g=>g.competicaoId===compId).sort((a,b)=>new Date(b.dataJogo)-new Date(a.dataJogo)),t=new Set;return r.forEach(g=>{t.size<2*limit&&(t.add(g.equipaCasaId),t.add(g.equipaForaId))}),Array.from(t).sort(()=>.5-Math.random()).slice(0,limit).map(id=>clubsMap.get(id)) }
+        async function loadAndRenderPickcards(teamId, type) {
+            const containerId = `pickcards-for-${type}-${teamId}`;
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            if (type === 'team') {
+                let games = await fetchLastGamesForTeam(teamId);
+                if (games.length > 0) {
+                    container.innerHTML = games.map(game => {
+                        const home = clubsMap.get(game.equipaCasaId);
+                        const away = clubsMap.get(game.equipaForaId);
+                        return home && away ? `<a href="game.html?id=${game.id}" class="result-pickcard" title="${game.nomeJogo}"><img src="${home.logoUrl}" alt="${home.nome}"><span>${game.resultadoFinal||"VS"}</span><img src="${away.logoUrl}" alt="${away.nome}"></a>` : '';
+                    }).join('');
+                } else { container.innerHTML = `<span style="font-size:0.8rem; color:#888;">No recent games found.</span>`; }
+            }
+        }
+        function renderSearchResults(teams, competitions) {
+            const panel = document.getElementById('search-results-panel');
+            if (teams.length === 0 && competitions.length === 0) { panel.style.display = 'none'; return; }
+            let html = '';
+            if (competitions.length > 0) {
+                html += '<div class="search-results-section"><h3>Competitions</h3>';
+                competitions.forEach(comp => {
+                    const country = countriesMap.get(comp.paisId);
+                    const recentTeams = findRecentTeamsForCompetition(comp.id);
+                    html += `<div class="search-result-item result-type-comp">${country?`<img src="${country.bandeiraUrl}" alt="${country.nome}" class="result-flag">`:""}<a href="competition.html?id=${comp.id}" class="result-header"><img src="${comp.logoUrl}" class="result-logo"><div class="result-name-container"><div class="main-name">${comp.nome}${comp.namming ? ` <span class="sub-name">(${comp.namming})</span>` : ''}</div></div></a><div class="result-pickcards-container">${recentTeams.map(team=>team?`<a href="team.html?id=${team.id}" class="result-pickcard" title="${team.nome}"><img src="${team.logoUrl}" alt="${team.nome}"></a>`:"").join("")}</div></div>`;
+                });
+                html += '</div>';
+            }
+            if (teams.length > 0) {
+                html += '<div class="search-results-section"><h3>Teams</h3>';
+                teams.forEach(team => {
+                    const country = countriesMap.get(team.paisId);
+                    html += `<div class="search-result-item result-type-team">${country?`<img src="${country.bandeiraUrl}" alt="${country.nome}" class="result-flag">`:""}<a href="team.html?id=${team.id}" class="result-header"><img src="${team.logoUrl}" class="result-logo"><div class="result-name-container"><div class="main-name">${team.nome}</div></div></a><div class="result-pickcards-container" id="pickcards-for-team-${team.id}"><span style="font-size:0.8rem; color:#888;">Loading games...</span></div></div>`;
+                });
+                html += '</div>';
+            }
+            panel.innerHTML = html;
+            panel.style.display = 'block';
+            teams.forEach(team => { loadAndRenderPickcards(team.id, 'team'); });
+        }
+        function setupGlobalSearch() {
+            const inputElement = document.getElementById('global-search-input');
+            const panelElement = document.getElementById('search-results-panel');
+            let debounceTimer;
+            inputElement.addEventListener('input', (event) => {
+                clearTimeout(debounceTimer);
+                const searchTerm = event.target.value.toLowerCase();
+                if (searchTerm.length < 2) { panelElement.style.display = 'none'; return; }
+                debounceTimer = setTimeout(() => {
+                    const filteredTeams = Array.from(clubsMap.values()).filter(team => team.nome.toLowerCase().includes(searchTerm));
+                    const filteredCompetitions = Array.from(competitionsMap.values()).filter(comp => comp.nome.toLowerCase().includes(searchTerm) || (comp.namming && comp.namming.toLowerCase().includes(searchTerm)));
+                    renderSearchResults(filteredTeams, filteredCompetitions);
+                }, 300);
+            });
+            inputElement.addEventListener('focus', () => { if (inputElement.value.length > 1) { inputElement.dispatchEvent(new Event('input')); } });
+            document.addEventListener('click', (event) => { if (!document.getElementById('global-search-container').contains(event.target)) { panelElement.style.display = 'none'; } });
+        }
+
+        /**
+         * Função principal que busca os jogos, aplica o filtro, e atualiza a UI.
+         */
+        async function refreshGameDataAndUpdateUI() {
+            try {
+                // 1. Buscar os jogos mais recentes do Firebase.
+                const gamesQuery = query(collection(db, 'jogos'), orderBy("dataJogo", "desc"), limit(100));
+                const snapshot = await getDocs(gamesQuery);
+                const rawGames = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                // 2. Aplicar a lógica de filtragem para remover jogos futuros sem resultado.
+                const now = new Date();
+                now.setHours(0, 0, 0, 0); // Comparar apenas com o início do dia.
+
+                allFetchedGames = rawGames.filter(game => {
+                    const gameDate = parseDate(game.dataJogo);
+                    if (isNaN(gameDate.getTime())) return true; // Manter jogo se a data for inválida.
+
+                    const isFutureGame = gameDate > now;
+                    const hasInvalidResult = !game.resultadoFinal || game.resultadoFinal.trim() === "" || game.resultadoFinal.toUpperCase() === 'X';
+                    
+                    // Manter o jogo se a condição de exclusão (futuro E resultado inválido) NÃO for verdadeira.
+                    return !(isFutureGame && hasInvalidResult);
+                });
+
+                // 3. Redesenhar os componentes da UI com a lista de jogos já filtrada.
+                renderHighlightsFilters();
+                renderLatestFive(allFetchedGames);
+                renderFullList(allFetchedGames);
+                setupFilters(allFetchedGames);
+            } catch(e) { 
+                console.error("Error refreshing game data:", e);
+            }
+        }
+
+        async function initializePage() {
+            await Promise.all([ fetchAndStoreClubs(), fetchAndStoreCompetitions(), fetchAndStoreCountries() ]);
+            await fetchAndRenderSidebar();
+            setupSidebarFilter();
+            
+            // Faz o primeiro carregamento dos dados dos jogos (já com o filtro aplicado).
+            await refreshGameDataAndUpdateUI(); 
+            
+            setupGlobalSearch();
+
+            // Inicia o temporizador para fazer o refresh a cada 10 minutos.
+            const refreshInterval = 10 * 60 * 1000;
+            setInterval(refreshGameDataAndUpdateUI, refreshInterval);
+        }
+
+        initializePage();
+    </script>
+</body>
+</html>
