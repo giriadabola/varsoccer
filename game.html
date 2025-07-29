@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Jogo</title>
+    <style>
+        /* (Todos os seus estilos CSS permanecem os mesmos) */
+        * { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; } .page-container { display: flex; flex-direction: column; height: 100vh; } header { padding: 10px 20px; background-color: #ffffff; border-bottom: 1px solid #dddfe2; } .logo-container { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; } .logo-image { height: 40px; width: 40px; } .logo-name { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; } .content-wrapper { display: flex; flex-grow: 1; overflow: hidden; } .sidebar { width: 280px; flex-shrink: 0; background-color: #ffffff; padding: 15px; overflow-y: auto; border-right: 1px solid #dddfe2; } .main-content { flex-grow: 1; padding: 25px; background-color: #f9f9f9; overflow-y: auto; display: flex; flex-direction: column; } .game-content-wrapper { display: flex; gap: 20px; align-items: flex-start; flex-grow: 1; min-height: 0; } #video-section { flex: 1; min-width: 0; display: flex; flex-direction: column; } #game-title { font-size: 1.75rem; margin-bottom: 15px; line-height: 1.2; } #video-container { width: 100%; position: relative; background-color: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; padding: 0; } #video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; } #suggestion-overlay { display: flex; flex-direction: column; gap: 15px; align-items: center; padding: 20px;} #show-suggestion-form-btn, #save-video-btn, #search-youtube-btn { padding: 10px 20px; font-size: 1rem; font-weight: 500; border-radius: 8px; border: none; cursor: pointer; flex-shrink: 0; } #show-suggestion-form-btn { background-color: #007bff; color: white; } #suggestion-form { display: none; gap: 10px; margin-top: 10px; align-items: center; flex-direction: column; width: 80%; max-width: 500px; } #suggestion-form-buttons { display: flex; gap: 10px; margin-top: 5px; } #video-url-input { padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; width: 100%; } #search-youtube-btn { background-color: #555; color: white; } #save-video-btn { background-color: #28a745; color: white; } #save-video-btn:disabled { background-color: #aaa; } #jornada-picker-section { margin-top: 25px; } #jornada-picker-section h3 { margin-bottom: 10px; font-size: 1.1rem; } #jornada-picker-container { display: flex; flex-wrap: wrap; gap: 8px; } .jornada-pickcard { display: inline-block; padding: 8px 14px; background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 18px; font-size: 0.85rem; font-weight: 500; text-decoration: none; transition: all 0.2s ease; } .jornada-pickcard:hover { background-color: #f0f2f5; border-color: #aaa; } .jornada-pickcard.current-jornada { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; } #related-games-section { flex: 0 0 300px; display: flex; flex-direction: column; min-width: 0; } #related-games-section h2 { font-size: 1.2rem; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #dddfe2; } #related-games-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 5px; } .related-game-item { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 8px; background-color: #fff; border: 1px solid #ddd; border-radius: 8px; text-decoration: none; color: inherit; } .related-game-team { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; min-width: 0; } .related-game-team-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .related-game-logo { width: 24px; height: 24px; object-fit: contain; flex-shrink: 0; } .related-game-score { font-weight: bold; font-size: 1rem; } .related-game-item.current-game { background-color: #e7f3ff; border-color: #007bff; font-weight: 500; } .sidebar-header { margin-bottom: 20px; } .back-button { display: inline-block; padding: 8px 16px; background-color: #e4e6eb; color: #050505; border-radius: 8px; text-decoration: none; font-weight: 500; } .related-link { display: flex; align-items: center; padding: 10px; border-radius: 8px; margin-bottom: 8px; text-decoration: none; color: inherit; } .related-logo { width: 32px; height: 32px; object-fit: contain; margin-right: 12px; } .related-name { font-weight: 500; } .loading-message { color: #888; } .thumbnail-link { display: block; position: relative; cursor: pointer; background-color: #000; width: 100%; height: 100%; } .thumbnail-link img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.8; transition: opacity 0.2s ease-in-out; } .thumbnail-link:hover img { opacity: 1; } .thumbnail-link::after { content: '▶'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; color: white; text-shadow: 0px 0px 15px rgba(0,0,0,0.8); pointer-events: none; transition: transform 0.2s ease-in-out; } .thumbnail-link:hover::after { transform: translate(-50%, -50%) scale(1.1); }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- (Resto do seu HTML body permanece igual) -->
+        <header><a href="index.html" class="logo-container"><img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image"><span class="logo-name">VARSOCCER</span></a></header><div class="content-wrapper"><nav class="sidebar"><div id="sidebar-content"><p class="loading-message">Loading...</p></div></nav><main class="main-content"><div class="game-content-wrapper"><section id="video-section"><h1 id="game-title"><p class="loading-message">Loading details...</p></h1><div id="video-container"><p class="loading-message">Loading vídeo...</p></div><div id="jornada-picker-section"></div></section><aside id="related-games-section"><h2>In this round</h2><div id="related-games-list"><p class="loading-message">Loading matches...</p></div></aside></div></main></div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, query, where, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        
+        // Insira a sua chave de API pessoal aqui.
+        const YOUTUBE_API_KEY = "AIzaSyB8B8pvhuvkX1Z86Bkq0ozqEZ2EBVPmSmo"; 
+    
+        const firebaseConfig = {
+            apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o",
+            authDomain: "varsoccer-26040.firebaseapp.com",
+            projectId: "varsoccer-26040",
+            storageBucket: "varsoccer-26040.firebasestorage.app",
+            messagingSenderId: "11877829810",
+            appId: "1:11877829810:web:98f9baa131a3b88b6e8dab"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let clubsMap = new Map();
+        
+        const fetchAndStoreClubs = async () => { /* ...código sem alterações... */ if (clubsMap.size > 0) return; const snapshot = await getDocs(collection(db, 'clubes')); snapshot.forEach(d => clubsMap.set(d.id, d.data())); };
+        const fetchFullGameData = async (gameId) => { /* ...código sem alterações... */ const gameDocSnapshot = await getDoc(doc(db, 'jogos', gameId)); if (!gameDocSnapshot.exists()) throw new Error("Game not found"); const game = gameDocSnapshot.data(); const [homeTeamSnapshot, awayTeamSnapshot, competitionSnapshot] = await Promise.all([ getDoc(doc(db, 'clubes', game.equipaCasaId)), getDoc(doc(db, 'clubes', game.equipaForaId)), getDoc(doc(db, 'competicoes', game.competicaoId)) ]); return { id: gameId, game, homeTeam: homeTeamSnapshot.exists() ? { id: homeTeamSnapshot.id, ...homeTeamSnapshot.data() } : null, awayTeam: awayTeamSnapshot.exists() ? { id: awayTeamSnapshot.id, ...awayTeamSnapshot.data() } : null, competition: competitionSnapshot.exists() ? { id: competitionSnapshot.id, ...competitionSnapshot.data() } : null }; };
+        const getYouTubeVideoId = (url) => { /* ...código sem alterações... */ if (!url) return null; const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/; const match = url.match(regExp); return (match && match[2].length === 11) ? match[2] : null; };
+    
+        // ##### FUNÇÃO ATUALIZADA #####
+        // Agora aceita o parâmetro 'forceThumbnail' que corresponde ao campo 'apiYt'
+        const checkAndRenderVideo = async (videoUrl, container, forceThumbnail) => {
+            const videoId = getYouTubeVideoId(videoUrl);
+            if (!videoId) {
+                container.innerHTML = `<p>URL de vídeo inválido.</p>`;
+                return;
+            }
+    
+            // NOVO: Verifica se o campo apiYt (forceThumbnail) é verdadeiro.
+            // Se for, mostra a capa com o link e termina a função aqui.
+            if (forceThumbnail === true) {
+                console.log("apiYt é true. A renderizar a capa do vídeo como link.");
+                const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                container.innerHTML = `<a href="${videoUrl}" target="_blank" rel="noopener noreferrer" class="thumbnail-link" title="Clique para assistir no YouTube"><img src="${thumbnailUrl}" alt="Capa do vídeo"></a>`;
+                return; 
+            }
+    
+            // Se forceThumbnail não for true, o código abaixo executa normalmente,
+            // tentando incorporar o vídeo via IFrame.
+            if (YOUTUBE_API_KEY === "COLE_A_SUA_CHAVE_DE_API_AQUI") {
+                 container.innerHTML = `<p style="color:red; padding: 20px; text-align: center;">Erro: Chave da API do YouTube não configurada.</p>`;
+                 return;
+            }
+            
+            const apiUrl = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${YOUTUBE_API_KEY}&part=status`;
+    
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    const errorMessage = errorData.error.message || `Erro HTTP! status: ${response.status}`;
+                    console.error("Erro na API do YouTube:", errorMessage);
+                    throw new Error(errorMessage);
+                }
+                const data = await response.json();
+                
+                if (data.items && data.items.length > 0) {
+                    if (data.items[0].status.embeddable) {
+                        const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                        container.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                    } else {
+                        throw new Error("O vídeo não pode ser incorporado.");
+                    }
+                } else {
+                    throw new Error("Vídeo não encontrado.");
+                }
+            } catch (error) {
+                // FALLBACK: Para qualquer erro, mostra a capa do vídeo
+                console.warn(`A renderizar a capa de fallback. Motivo: ${error.message}`);
+                const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                container.innerHTML = `<a href="${videoUrl}" target="_blank" rel="noopener noreferrer" class="thumbnail-link" title="Vídeo indisponível para incorporar. Clique para ver no YouTube."><img src="${thumbnailUrl}" alt="Capa do vídeo"></a>`;
+            }
+        };
+    
+        // ##### FUNÇÃO ATUALIZADA #####
+        const renderMainContent = async (data) => {
+            document.getElementById('game-title').textContent = data.game.nomeJogo || `${data.homeTeam.nome} vs ${data.awayTeam.nome}`;
+            const vc = document.getElementById('video-container');
+            const videoUrl = data.game.videoUrl;
+            
+            if (videoUrl && videoUrl.trim() !== '') {
+                // NOVO: Passamos o valor de 'data.game.apiYt' como terceiro argumento.
+                // Se 'apiYt' for true, a função checkAndRenderVideo irá forçar a exibição da capa.
+                // Se for undefined, null ou false, tentará incorporar o iframe.
+                await checkAndRenderVideo(videoUrl, vc, data.game.apiYt);
+            } else {
+                // O código para sugerir um vídeo permanece o mesmo.
+                vc.innerHTML = `<div id="suggestion-overlay"><button id="show-suggestion-form-btn">Sugerir um vídeo</button><form id="suggestion-form" style="display: none;"><input type="url" id="video-url-input" placeholder="Cole o link do vídeo aqui" required title="Por favor, insira uma URL válida (ex: https://...)"><div id="suggestion-form-buttons"><button type="button" id="search-youtube-btn">🔎 Procurar</button><button type="submit" id="save-video-btn">Gravar</button></div></form></div>`;
+            }
+        };
+        
+        // Nenhuma outra alteração é necessária nas funções abaixo
+        const renderSidebar = (data) => { /* ...código sem alterações... */ const s = document.getElementById('sidebar-content'); s.innerHTML = `<div class="sidebar-header"><a href="#" onclick="history.back();return false;" class="back-button">← Back</a></div><h2>See more goals:</h2>`; if (data.homeTeam) s.innerHTML += `<a href="team.html?id=${data.homeTeam.id}" class="related-link"><img src="${data.homeTeam.logoUrl}" class="related-logo"><span>${data.homeTeam.nome}</span></a>`; if (data.awayTeam) s.innerHTML += `<a href="team.html?id=${data.awayTeam.id}" class="related-link"><img src="${data.awayTeam.logoUrl}" class="related-logo"><span>${data.awayTeam.nome}</span></a>`; if (data.competition) s.innerHTML += `<a href="competition.html?id=${data.competition.id}" class="related-link"><img src="${data.competition.logoUrl}" class="related-logo"><span>${data.competition.nome}</span></a>`; };
+        const renderRelatedGames = (data, allSeasonGames) => { /* ...código sem alterações... */ const lc = document.getElementById('related-games-list'); lc.innerHTML = ''; let gamesInSameJornada = allSeasonGames.filter(g => g.jornada == data.game.jornada); if (gamesInSameJornada.length === 0) { lc.innerHTML = '<p>Nenhum outro jogo nesta jornada.</p>'; return; }  gamesInSameJornada.sort((a,b) => new Date(a.dataJogo) - new Date(b.dataJogo));  gamesInSameJornada.forEach(g => {  const ht = clubsMap.get(g.equipaCasaId), at = clubsMap.get(g.equipaForaId);  if (ht && at) {  const ic = `related-game-item ${g.id === data.id ? 'current-game' : ''}`;  lc.innerHTML += `<a href="game.html?id=${g.id}" class="${ic}"><div class="related-game-team home"><img src="${ht.logoUrl}" class="related-game-logo"><span class="related-game-team-name">${ht.nome}</span></div><span class="related-game-score">${g.resultadoFinal || 'VS'}</span><div class="related-game-team away"><span class="related-game-team-name">${at.nome}</span><img src="${at.logoUrl}" class="related-logo"></div></a>`;  }  });  };
+        const renderJornadaPicker = (currentGamedata, allSeasonGames) => { /* ...código sem alterações... */ const pickerSection = document.getElementById('jornada-picker-section'); if (!allSeasonGames || allSeasonGames.length === 0) { pickerSection.style.display = 'none'; return; } const allJornadas = [...new Set(allSeasonGames.map(g => g.jornada))].sort((a, b) => a - b); let pickerHtml = '<h3>Rounds:</h3><div id="jornada-picker-container">'; allJornadas.forEach(jornadaNum => { const gamesInThisJornada = allSeasonGames.filter(g => g.jornada === jornadaNum).sort((a, b) => new Date(a.dataJogo) - new Date(b.dataJogo)); if (gamesInThisJornada.length > 0) { const firstGameOfJornada = gamesInThisJornada[0]; const isCurrentJornada = jornadaNum == currentGamedata.game.jornada; const cardClass = `jornada-pickcard ${isCurrentJornada ? 'current-jornada' : ''}`; pickerHtml += `<a href="game.html?id=${firstGameOfJornada.id}" class="${cardClass}">Round ${jornadaNum}</a>`; } }); pickerHtml += '</div>'; pickerSection.innerHTML = pickerHtml; };
+        const setupSuggestionListeners = (gameId) => { /* ...código sem alterações... */ const ssb = document.getElementById('show-suggestion-form-btn'); if (!ssb) return; const sf = document.getElementById('suggestion-form'); const sb = document.getElementById('save-video-btn'); const ui = document.getElementById('video-url-input'); const searchBtn = document.getElementById('search-youtube-btn'); ssb.addEventListener('click', () => { ssb.style.display = 'none'; sf.style.display = 'flex'; }); sf.addEventListener('submit', async (event) => { event.preventDefault(); const nu = ui.value.trim(); sb.disabled = true; sb.textContent = 'A gravar...'; try { await updateDoc(doc(db, 'jogos', gameId), { videoUrl: nu }); location.reload(); } catch (e) { console.error("Erro ao gravar vídeo: ", e); alert("Ocorreu um erro. Por favor, tente novamente."); sb.disabled = false; sb.textContent = 'Gravar'; } }); searchBtn.addEventListener('click', () => { const gameTitle = document.getElementById('game-title').textContent; if (gameTitle && !gameTitle.includes('Loading')) { window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(gameTitle + " melhores momentos")}`, '_blank'); } else { alert("Por favor, aguarde o título do jogo carregar."); } }); };
+        
+        async function initializePage() { /* ...código sem alterações... */ const gameId = new URLSearchParams(window.location.search).get('id'); if (!gameId) { document.querySelector('.main-content').innerHTML = '<h1>ID do jogo não fornecido.</h1>'; return; } try { await fetchAndStoreClubs(); const fullData = await fetchFullGameData(gameId); if (!fullData || !fullData.game) throw new Error("Não foi possível carregar os dados essenciais do jogo."); const gamesQuery = query(collection(db, 'jogos'), where("competicaoId", "==", fullData.game.competicaoId), where("temporada", "==", fullData.game.temporada)); const seasonSnapshot = await getDocs(gamesQuery); const allSeasonGames = seasonSnapshot.docs.map(d => ({ id: d.id, ...d.data() })); await renderMainContent(fullData);  renderSidebar(fullData); renderRelatedGames(fullData, allSeasonGames); renderJornadaPicker(fullData, allSeasonGames); setupSuggestionListeners(gameId); } catch (error) { console.error(error); document.querySelector('.main-content').innerHTML = `<h1>Erro: ${error.message}</h1>`; } }
+    
+        initializePage();
+    </script>
+</body>
+</html>
