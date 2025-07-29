@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página de Criação</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.default.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; color: #333; margin: 0; padding: 15px; font-size: 0.9em; padding-top: 60px; }
+        #openBulkModalBtn { position: fixed; top: 10px; right: 15px; background-color: #2c3e50; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1001; display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease, background-color 0.2s; }
+        #openBulkModalBtn:hover { background-color: #34495e; transform: rotate(45deg); }
+        .tab-container { width: 100%; max-width: 900px; margin: 0 auto; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+        .tab-buttons { display: flex; background-color: #333; }
+        .tab-button { padding: 12px 15px; cursor: pointer; border: none; background-color: #333; color: white; font-size: 0.95em; transition: background-color 0.3s; flex-grow: 1; text-align: center; border-right: 1px solid #444; }
+        .tab-button:last-child { border-right: none; }
+        .tab-button:hover { background-color: #555; }
+        .tab-button.active { background-color: #007bff; color: white; }
+        .tab-content { padding: 15px; border-top: 1px solid #ddd; display: none; }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
+        .form-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end; }
+        .form-row .form-group { flex: 1; margin-bottom: 0; }
+        .form-group label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 0.9em; }
+        .form-group input[type="text"], .form-group input[type="date"], .form-group input[type="url"], .form-group input[type="number"], .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; font-size: 0.95em; }
+        .form-group select[multiple] { height: 100px; }
+        .form-group textarea { min-height: 150px; resize: vertical; }
+        .form-group input[readonly] { background-color: #e9ecef; cursor: not-allowed; }
+        button[type="submit"], .action-btn { background-color: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        button[type="submit"]:hover, .action-btn:hover { background-color: #218838; }
+        button.generate-btn { background-color: #007bff; }
+        button.generate-btn:hover { background-color: #0056b3; }
+        h3, h4 { margin-top: 0; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .ts-control .item-logo, .ts-dropdown .option-logo { height: 20px; width: 20px; margin-right: 8px; vertical-align: middle; object-fit: contain; }
+        .ts-control .item-name, .ts-dropdown .option-name { vertical-align: middle; display: inline-block; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 8px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .close-button { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-button:hover, .close-button:focus { color: black; text-decoration: none; }
+        #previewPanel { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px; }
+        #previewList { max-height: 30vh; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background-color: #f9f9f9; }
+        .preview-item { display: flex; align-items: center; padding: 5px; border-bottom: 1px solid #eee; }
+        .preview-item:last-child { border-bottom: none; }
+        .preview-item input[type="checkbox"] { margin-right: 10px; }
+        .preview-item.is-invalid { color: #dc3545; text-decoration: line-through; }
+        .preview-item.is-invalid label { cursor: not-allowed; }
+        .invalid-reason { font-style: italic; margin-left: auto; font-size: 0.9em; }
+
+        .floating-panel { display: none; position: fixed; top: 80px; right: 20px; z-index: 100; background-color: #fefefe; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.25); padding: 15px; width: 480px; max-width: 90vw; box-sizing: border-box; }
+        .floating-panel .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: move; user-select: none; }
+        .floating-panel .panel-header h4 { margin: 0; border: none; padding: 0; font-size: 1.1em; }
+        #closePreviewBtn { font-size: 24px; font-weight: bold; color: #888; cursor: pointer; line-height: 1; }
+        #closePreviewBtn:hover { color: #000; }
+        #videoEmbedContainer { position: relative; width: 100%; padding-top: 56.25%; background-color: #000; }
+        #videoEmbedContainer iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        .floating-panel .panel-footer { margin-top: 15px; }
+        .floating-panel .panel-footer label { display: flex; align-items: center; gap: 8px; font-weight: normal; }
+   .input-with-button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.input-with-button input {
+    flex-grow: 1;
+}
+.yt-search-btn {
+    flex-shrink: 0;
+    width: 45px;
+    height: 36px; /* Altura aproximada do input */
+    border: none;
+    border-radius: 4px;
+    background-color: #FF0000;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background-color 0.2s;
+}
+.yt-search-btn:hover {
+    background-color: #c40303;
+}
+   
+   
+   </style>
+</head>
+<body>
+
+    <button id="openBulkModalBtn" title="Criar Múltiplos Jogos">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+    </button>
+    
+    <div class="tab-container">
+       <div class="tab-buttons">
+            <button class="tab-button active" onclick="openTab(event, 'criarJogo')">Criar Jogo</button>
+            <button class="tab-button" onclick="openTab(event, 'criarJogador')">Criar Jogador</button>
+            <button class="tab-button" onclick="openTab(event, 'criarEquipa')">Criar Equipa</button>
+            <button class="tab-button" onclick="openTab(event, 'criarCompeticao')">Criar Competição</button>
+            <button class="tab-button" onclick="openTab(event, 'criarPais')">Criar País</button>
+            <button class="tab-button" onclick="openTab(event, 'criarTemporada')">Criar Temporada</button>
+        </div>
+        
+        <div id="criarJogo" class="tab-content active">
+            <h3>Criar Novo Jogo</h3>
+            <form id="formCriarJogo">
+                 <div class="form-row">
+                    <div class="form-group" style="flex: 0.5;"> <label for="jogoGenero">Género:</label> <select id="jogoGenero" name="genero"> <option value="Men" selected>Men</option> <option value="Woman">Woman</option> </select> </div>
+                    <div class="form-group" style="flex: 2;"> <label for="jogoCompeticao">Competição:</label> <select id="jogoCompeticao" name="competicaoId" required placeholder="Primeiro, selecione o género..."></select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogoEquipaCasa">Equipa da Casa:</label> <select id="jogoEquipaCasa" name="equipaCasaId" required placeholder="Primeiro, selecione a competição..."></select> </div>
+                    <div class="form-group"> <label for="jogoEquipaFora">Equipa de Fora:</label> <select id="jogoEquipaFora" name="equipaForaId" required placeholder="Primeiro, selecione a competição..."></select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogoResultadoCasa">Resultado Casa:</label> <select id="jogoResultadoCasa" name="resultadoCasa"></select> </div>
+                    <div class="form-group"> <label for="jogoResultadoFora">Resultado Fora:</label> <select id="jogoResultadoFora" name="resultadoFora"></select> </div>
+                    <div class="form-group"> <label for="jogoResultadoFinal">Resultado Final:</label> <input type="text" id="jogoResultadoFinal" name="resultadoFinal" readonly> </div>
+                </div>
+                 <div class="form-row">
+                    <div class="form-group"> <label for="jogoData">Data do Jogo:</label> <input type="date" id="jogoData" name="dataJogo" required> </div>
+                    <div class="form-group"> <label for="jogoTemporada">Temporada:</label> <select id="jogoTemporada" name="temporada" required> <option value="">A carregar...</option> </select> </div>
+                    <div class="form-group" style="flex: 0.5;"> <label for="jogoJornada">Jornada:</label> <select id="jogoJornada" name="jornada" required></select> </div>
+                </div>
+                 <div class="form-group"> <label for="jogoNomeJogo">Nome do Jogo (Automático):</label> 
+                     <span id="jogoNomeError" style="color: #dc3545; font-weight: bold; margin-left: 10px; font-size: 0.9em; height: 1em;"></span>
+                    <input type="text" id="jogoNomeJogo" name="nomeJogo" readonly> </div>
+               
+                 <div class="form-group">
+    <label for="jogoLinkVideo">Link Vídeo (opcional):</label>
+    <div class="input-with-button">
+        <input type="url" id="jogoLinkVideo" name="videoUrl" placeholder="https://exemplo.com/video">
+        <button type="button" id="searchOnYTBtn" class="yt-search-btn" title="Procurar melhores momentos no YouTube">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </button>
+    </div>
+</div>
+              
+                <button type="submit" class="action-btn">Criar Jogo</button>
+            </form>
+        </div>
+        <div id="criarJogador" class="tab-content">
+            <h3>Criar Novo Jogador</h3>
+            <form id="formCriarJogador">
+                <div class="form-group"> <label for="jogadorNome">Nome do Jogador:</label> <input type="text" id="jogadorNome" name="nome" required> </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogadorNacionalidade">Nacionalidade:</label> <select id="jogadorNacionalidade" name="nacionalidadeId" required> <option value="">Selecione...</option> </select> </div>
+                    <div class="form-group"> <label for="jogadorPosicao">Posição:</label> <select id="jogadorPosicao" name="posicao" required> <option value="Forward">Forward</option> <option value="Midfielder">Midfielder</option> <option value="Defender">Defender</option> <option value="Goalkeeper">Goalkeeper</option> </select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogadorPePreferido">Pé Preferido:</label> <select id="jogadorPePreferido" name="pePreferido"> <option value="Direito" selected>Direito</option> <option value="Esquerdo">Esquerdo</option> </select> </div>
+                    <div class="form-group"> <label for="jogadorNascimento">Data de Nascimento:</label> <input type="date" id="jogadorNascimento" name="dataNascimento" required> </div>
+                    <div class="form-group"> <label for="jogadorGenero">Género:</label> <select id="jogadorGenero" name="genero"> <option value="Men" selected>Men</option> <option value="Woman">Woman</option> </select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="jogadorAtivo">No Ativo?</label> <select id="jogadorAtivo" name="ativo"> <option value="Yes" selected>Yes</option> <option value="No">No</option> </select> </div>
+                    <div class="form-group" style="flex: 2;"> <label for="jogadorImagemCara">Link Imagem Cara (URL):</label> <input type="url" id="jogadorImagemCara" name="imagemCaraUrl" placeholder="https://exemplo.com/imagem.jpg"> </div>
+                </div>
+                <button type="submit" class="action-btn">Criar Jogador</button>
+            </form>
+        </div>
+        <div id="criarEquipa" class="tab-content">
+            <h3>Criar Nova Equipa</h3>
+            <form id="formCriarEquipa">
+                <div class="form-group">
+                    <label for="equipaNome">Nome da Equipa:</label>
+                    <span id="equipaNomeError" style="color: #dc3545; font-weight: bold; margin-left: 10px; font-size: 0.9em; height: 1em;"></span>
+                    <input type="text" id="equipaNome" name="nome" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="equipaPais">País:</label> <select id="equipaPais" name="paisId" required> <option value="">Selecione...</option> </select> </div>
+                    <div class="form-group"> <label for="equipaTipo">Equipa/Seleção:</label> <select id="equipaTipo" name="tipoEquipa"> <option value="Team" selected>Team</option> <option value="Nacional Team">Nacional Team</option> </select> </div>
+                    <div class="form-group"> <label for="equipaGenero">Género:</label> <select id="equipaGenero" name="genero"> <option value="Men" selected>Men</option> <option value="Woman">Woman</option> </select> </div>
+                </div>
+                <div class="form-group"> <label for="equipaCompeticoes">Competições:</label> <select id="equipaCompeticoes" name="competicoesIds" multiple required> </select> </div>
+                <div class="form-group"> <label for="equipaLogoUrl">Link para imagem de logo (URL):</label> <input type="url" id="equipaLogoUrl" name="logoUrl" placeholder="https://exemplo.com/logo.png"> </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="equipaEstadio">Estádio (opcional):</label> <input type="text" id="equipaEstadio" name="estadio"> </div>
+                    <div class="form-group"> <label for="equipaCapacidade">Capacidade do Estádio (opcional):</label> <input type="number" id="equipaCapacidade" name="capacidadeEstadio" min="0"> </div>
+                </div>
+                <div class="form-group"> <label for="equipaAlcunha">Alcunha do Clube (opcional):</label> <input type="text" id="equipaAlcunha" name="alcunha"> </div>
+                <button type="submit" class="action-btn">Criar Equipa</button>
+            </form>
+        </div>
+        <div id="criarCompeticao" class="tab-content">
+            <h3>Criar Nova Competição</h3>
+            <form id="formCriarCompeticao">
+                <div class="form-group"> <label for="competicaoNome">Nome da Competição:</label> <input type="text" id="competicaoNome" name="nome" required> </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="competicaoPais">País:</label> <select id="competicaoPais" name="paisId" required> <option value="">Selecione...</option> </select> </div>
+                    <div class="form-group"> <label for="competicaoTipo">Tipo:</label> <select id="competicaoTipo" name="tipo" required> <option value="Doméstica Liga">Doméstica Liga</option> <option value="Doméstica Taça">Doméstica Taça</option> <option value="Internacional Clubes">Internacional Clubes</option> <option value="Internacional Taça">Internacional Taça</option> </select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="competicaoEscalao">Escalão:</label> <select id="competicaoEscalao" name="escalao"> <option value="Superior" selected>Superior</option> <option value="Inferior">Inferior</option> </select> </div>
+                    <div class="form-group"> <label for="competicaoGenero">Género:</label> <select id="competicaoGenero" name="genero"> <option value="Men" selected>Men</option> <option value="Woman">Woman</option> </select> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="competicaoNamming">Namming (opcional):</label> <input type="text" id="competicaoNamming" name="namming"> </div>
+                    <div class="form-group"> <label for="competicaoLogoUrl">Link para imagem de logo (URL):</label> <input type="url" id="competicaoLogoUrl" name="logoUrl" placeholder="https://exemplo.com/logo.png"> </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"> <label for="competicaoNoMenu">No Menu?</label> <select id="competicaoNoMenu" name="noMenu"> <option value="No" selected>No</option> <option value="Yes">Yes</option> </select> </div>
+                    <div class="form-group"> <label for="competicaoPosicaoMenu">Posição no Menu:</label> <input type="number" id="competicaoPosicaoMenu" name="posicaoMenu" min="0"> </div>
+                </div>
+                <button type="submit" class="action-btn">Criar Competição</button>
+            </form>
+        </div>
+        <div id="criarPais" class="tab-content">
+            <h3>Criar Novo País</h3>
+             <form id="formCriarPais">
+                <div class="form-group"> <label for="paisNome">Nome do País:</label> <input type="text" id="paisNome" name="nome" required> </div>
+               <span id="paisNomeError" style="color: #dc3545; font-weight: bold; margin-left: 10px; font-size: 0.9em; height: 1em;"></span>
+                <div class="form-row">
+                    <div class="form-group"> <label for="paisContinente">Continente:</label> <select id="paisContinente" name="continente" required> <option value="Europe">Europe</option> <option value="Africa">Africa</option> <option value="South America">South America</option> <option value="North America">North America</option> <option value="Asia">Asia</option> <option value="Oceania">Oceania</option>  <option value="World">World</option> </select> </div>
+                    <div class="form-group"> <label for="paisBandeiraUrl">Link para imagem de bandeira (URL):</label> <input type="url" id="paisBandeiraUrl" name="bandeiraUrl" placeholder="https://exemplo.com/bandeira.png"> </div>
+                </div>
+                <button type="submit" class="action-btn">Criar País</button>
+            </form>
+        </div>
+        <div id="criarTemporada" class="tab-content">
+            <h3>Criar Nova Temporada</h3>
+             <form id="formCriarTemporada">
+                <div class="form-group"> <label for="temporadaNome">Nome da Temporada (ex: 2024/2025):</label> <input type="text" id="temporadaNome" name="nome" required placeholder="YYYY/YYYY"> </div>
+                <button type="submit" class="action-btn">Criar Temporada</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="bulkCreateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>Criar Múltiplos Jogos</h4>
+                <span class="close-button" id="closeBulkModalBtn">×</span>
+            </div>
+            <div id="bulkForm">
+                <div class="form-row">
+                    <div class="form-group"> <label for="bulkGenero">Género:</label> <select id="bulkGenero" name="genero"> <option value="Men" selected>Men</option> <option value="Woman">Woman</option> </select> </div>
+                    <div class="form-group" style="flex:2;"> <label for="bulkCompeticao">Competição:</label> <select id="bulkCompeticao" name="competicaoId" required></select> </div>
+                    <div class="form-group"> <label for="bulkTemporada">Temporada:</label> <select id="bulkTemporada" name="temporada" required></select> </div>
+                </div>
+                <div class="form-group"> <label for="bulkTextData">Cole os dados dos jogos aqui:</label> <textarea id="bulkTextData" placeholder="Exemplo de linha: h2h 2024-08-16 20:00 Man United Man United 1-0 Fulham Fulham J1"></textarea> </div>
+                <button id="generateGamesBtn" class="action-btn generate-btn">Gerar Lista de Jogos</button>
+            </div>
+            <div id="previewPanel" style="display:none;">
+                <h4>Jogos a serem criados</h4>
+                <p>Confirme a lista abaixo. Jogos marcados a vermelho já existem ou contêm erros e não serão criados.</p>
+                <div id="previewList"></div>
+                <div style="margin-top: 15px; text-align: right;"> <button id="createGamesBtn" class="action-btn">Criar Jogos Selecionados</button> </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, doc, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o", authDomain: "varsoccer-26040.firebaseapp.com", projectId: "varsoccer-26040", storageBucket: "varsoccer-26040.firebasestorage.app", messagingSenderId: "11877829810", appId: "1:11877829810:web:98f9baa131a3b88b6e8dab" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let allCompetitions = [], allClubs = [], allSeasons = [], allPaises = [];
+        let tsBulkCompeticao, tsJogoCompeticao, tsJogoEquipaCasa, tsJogoEquipaFora, tsEquipaCompeticoes;
+        let isInitialized = false;
+
+        const renderWithLogo = {
+            option: (data, escape) => `<div><img class="option-logo" src="${escape(data.logoUrl || 'https://via.placeholder.com/20')}" alt="Logo"> <span class="option-name">${escape(data.nome)}</span></div>`,
+            item: (data, escape) => `<div class="item"><img class="item-logo" src="${escape(data.logoUrl || 'https://via.placeholder.com/20')}" alt="Logo"> <span class="item-name">${escape(data.nome)}</span></div>`
+        };
+
+        window.openTab = (event, tabName) => {
+            document.querySelectorAll(".tab-content").forEach(tc => { tc.style.display = "none"; tc.classList.remove("active"); });
+            document.querySelectorAll(".tab-button").forEach(tb => tb.classList.remove("active"));
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName).classList.add("active");
+            event.currentTarget.classList.add("active");
+        };
+
+        const singleGameElements = {
+            genero: document.getElementById('jogoGenero'),
+            competicao: document.getElementById('jogoCompeticao'),
+            equipaCasa: document.getElementById('jogoEquipaCasa'),
+            equipaFora: document.getElementById('jogoEquipaFora'),
+            resCasa: document.getElementById('jogoResultadoCasa'),
+            resFora: document.getElementById('jogoResultadoFora'),
+            resFinal: document.getElementById('jogoResultadoFinal'),
+            data: document.getElementById('jogoData'),
+            temporada: document.getElementById('jogoTemporada'),
+            jornada: document.getElementById('jogoJornada'),
+            nomeJogo: document.getElementById('jogoNomeJogo')
+        };
+        const bulkModalElements = {
+            modal: document.getElementById('bulkCreateModal'),
+            openBtn: document.getElementById('openBulkModalBtn'),
+            closeBtn: document.getElementById('closeBulkModalBtn'),
+            generateBtn: document.getElementById('generateGamesBtn'),
+            createBtn: document.getElementById('createGamesBtn'),
+            panel: document.getElementById('previewPanel'),
+            list: document.getElementById('previewList'),
+            genero: document.getElementById('bulkGenero'),
+            competicao: document.getElementById('bulkCompeticao'),
+            temporada: document.getElementById('bulkTemporada'),
+            text: document.getElementById('bulkTextData')
+        };
+
+        bulkModalElements.openBtn.onclick = () => bulkModalElements.modal.style.display = 'block';
+        bulkModalElements.closeBtn.onclick = () => bulkModalElements.modal.style.display = 'none';
+        window.onclick = (event) => { if (event.target == bulkModalElements.modal) bulkModalElements.modal.style.display = 'none'; };
+        
+        function populateBulkModalDropdowns() {
+            const { temporada, genero } = bulkModalElements;
+            temporada.innerHTML = '';
+            allSeasons.forEach(s => { temporada.innerHTML += `<option value="${s.nome}">${s.nome}</option>`; });
+            if (temporada.options.length > 0) temporada.selectedIndex = 0;
+            if(tsBulkCompeticao) {
+                const filteredComps = allCompetitions.filter(c => c.genero === genero.value);
+                tsBulkCompeticao.clear();
+                tsBulkCompeticao.clearOptions();
+                tsBulkCompeticao.addOptions(filteredComps);
+            }
+        }
+        
+        function findTeamByName(name) { return allClubs.find(c => c.nome.toLowerCase() === name.trim().toLowerCase()) || null; }
+
+   bulkModalElements.generateBtn.addEventListener('click', async () => {
+    const { text, list, panel } = bulkModalElements;
+    const rawText = text.value;
+    if (!rawText.trim()) { alert("Por favor, cole os dados dos jogos."); return; }
+    if (!tsBulkCompeticao.getValue()) { alert("Por favor, selecione uma competição."); return; }
+
+    let gameCandidates = [];
+    const nameCheckList = new Set();
+    
+    // Expressões regulares com a hora opcional (da correção anterior)
+    const regexWithScore = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+(\d+-\d+)\s*(?:\([^\)]+\))?\s+(.+?)\s+\4\s+(J\d+|POff|F|1\/8|QF|MF|1F)/i;
+    const regexWithVs = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+vs\s*(?:\([^\)]+\))?\s+(.+?)\s+\3\s+(J\d+|POff|F|1\/8|QF|MF|1F)/i;
+    
+    const gameBlocks = rawText.split(/h2h/i).filter(block => block.trim() !== '');
+
+    for (const block of gameBlocks) {
+        const singleLineBlock = block.replace(/\n/g, ' ').trim();
+        let match = singleLineBlock.match(regexWithScore);
+        let isFutureGame = !match;
+        if (isFutureGame) match = singleLineBlock.match(regexWithVs);
+
+        if (match) {
+            const dataJogo = match[1], equipaCasaNome = match[2].trim();
+            const equipaForaNome = isFutureGame ? match[3].trim() : match[4].trim();
+            const [resultadoCasa, resultadoFora] = isFutureGame ? [null, null] : match[3].split('-');
+            
+            // --- INÍCIO DA ALTERAÇÃO ---
+            // 1. Captura o valor bruto da jornada (ex: "J6" ou "QF")
+            let jornadaBruta = isFutureGame ? match[4] : match[5];
+            let jornadaFinal;
+
+            // 2. Verifica se o valor começa com "J" (ignorando maiúsculas/minúsculas)
+            if (jornadaBruta && jornadaBruta.toUpperCase().startsWith('J')) {
+                // 3. Se começar com "J", remove o primeiro caractere para obter só o número
+                jornadaFinal = jornadaBruta.substring(1);
+            } else {
+                // 4. Caso contrário (é "QF", "F", etc.), mantém o valor original
+                jornadaFinal = jornadaBruta;
+            }
+            // --- FIM DA ALTERAÇÃO ---
+
+            const equipaCasa = findTeamByName(equipaCasaNome), equipaFora = findTeamByName(equipaForaNome);
+
+            // A variável `jornada` foi renomeada para `jornadaFinal` para usar o valor corrigido
+            let candidate = { dataJogo, jornada: jornadaFinal, equipaCasaNome, equipaForaNome, resultadoCasa, resultadoFora, equipaCasaId: equipaCasa?.id || null, equipaForaId: equipaFora?.id || null, isValid: !!(equipaCasa && equipaFora), invalidReason: '' };
+            
+            if (!equipaCasa) candidate.invalidReason = `Equipa "${equipaCasaNome}" não encontrada.`;
+            else if (!equipaFora) candidate.invalidReason = `Equipa "${equipaForaNome}" não encontrada.`;
+            
+            const [y,m,d] = dataJogo.split('-');
+            const resultadoFinal = isFutureGame ? 'X' : `${resultadoCasa}-${resultadoFora}`;
+            candidate.nomeJogo = `${equipaCasaNome} ${resultadoFinal} ${equipaForaNome} - ${d}/${m}/${y}`;
+            
+            if (candidate.isValid) nameCheckList.add(candidate.nomeJogo);
+            gameCandidates.push(candidate);
+        }
+    }
+
+    // O resto da função permanece igual...
+    const existingGames = new Set();
+    if (nameCheckList.size > 0) {
+        const namesToQuery = Array.from(nameCheckList);
+        const chunks = [];
+        for (let i = 0; i < namesToQuery.length; i += 30) chunks.push(namesToQuery.slice(i, i + 30));
+        const queryPromises = chunks.map(chunk => getDocs(query(collection(db, "jogos"), where("nomeJogo", "in", chunk))));
+        const querySnapshots = await Promise.all(queryPromises);
+        querySnapshots.forEach(snapshot => snapshot.forEach(doc => existingGames.add(doc.data().nomeJogo)));
+    }
+    
+    list.innerHTML = '';
+    gameCandidates.forEach((game, index) => {
+        let isInvalid = !game.isValid, invalidReason = game.invalidReason;
+        if (game.isValid && existingGames.has(game.nomeJogo)) { isInvalid = true; invalidReason = 'Jogo já existe.'; }
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'preview-item' + (isInvalid ? ' is-invalid' : '');
+        itemDiv.innerHTML = `<input type="checkbox" id="game-check-${index}" data-index="${index}" ${isInvalid ? 'disabled' : 'checked'}><label for="game-check-${index}">${game.nomeJogo}</label>${isInvalid ? `<span class="invalid-reason">${invalidReason}</span>` : ''}`;
+        list.appendChild(itemDiv);
+    });
+    window.gameCandidates = gameCandidates;
+    panel.style.display = 'block';
+});
+
+
+
+
+
+
+        bulkModalElements.createBtn.addEventListener('click', async () => {
+            const { createBtn, modal, panel, text } = bulkModalElements;
+            const selectedIndices = Array.from(document.querySelectorAll('#previewList input:checked')).map(cb => parseInt(cb.dataset.index));
+            if (selectedIndices.length === 0) { alert("Nenhum jogo válido selecionado."); return; }
+
+            createBtn.disabled = true;
+            createBtn.textContent = `A criar ${selectedIndices.length}...`;
+            const batch = writeBatch(db);
+            const competicaoData = tsBulkCompeticao.options[tsBulkCompeticao.getValue()];
+
+            selectedIndices.forEach(index => {
+                const game = window.gameCandidates[index];
+                const gameData = {
+                    genero: bulkModalElements.genero.value, competicaoId: competicaoData.id, competicaoNome: competicaoData.nome,
+                    temporada: bulkModalElements.temporada.value, equipaCasaId: game.equipaCasaId, equipaForaId: game.equipaForaId,
+                    equipaCasaNome: game.equipaCasaNome, equipaForaNome: game.equipaForaNome, resultadoCasa: game.resultadoCasa,
+                    resultadoFora: game.resultadoFora, resultadoFinal: game.resultadoCasa !== null ? `${game.resultadoCasa}-${game.resultadoFora}` : 'X',
+                    dataJogo: game.dataJogo, jornada: game.jornada, nomeJogo: game.nomeJogo, videoUrl: '',
+                };
+                batch.set(doc(collection(db, "jogos")), gameData);
+            });
+
+            try {
+                await batch.commit();
+                alert(`${selectedIndices.length} jogos criados!`);
+                modal.style.display = 'none'; panel.style.display = 'none'; text.value = '';
+            } catch (error) { console.error("Erro em lote: ", error); alert("Erro: " + error.message); }
+            finally { createBtn.disabled = false; createBtn.textContent = 'Criar Jogos Selecionados'; }
+        });
+
+        const videoLinkInput = document.getElementById('jogoLinkVideo');
+        const previewPanel = document.getElementById('videoPreviewPanel');
+        const embedContainer = document.getElementById('videoEmbedContainer');
+        const closePreviewBtn = document.getElementById('closePreviewBtn');
+        const panelHeader = previewPanel.querySelector('.panel-header');
+
+        function getYouTubeEmbedUrl(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+        }
+
+        videoLinkInput.addEventListener('input', () => {
+            const url = videoLinkInput.value;
+            const embedUrl = getYouTubeEmbedUrl(url);
+            if (embedUrl) {
+                embedContainer.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                previewPanel.style.display = 'block';
+            } else {
+                previewPanel.style.display = 'none';
+            }
+        });
+
+        const hidePanel = () => { 
+            previewPanel.style.display = 'none';
+            embedContainer.innerHTML = '';
+        };
+        closePreviewBtn.addEventListener('click', hidePanel);
+
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        panelHeader.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            offsetX = e.clientX - previewPanel.getBoundingClientRect().left;
+            offsetY = e.clientY - previewPanel.getBoundingClientRect().top;
+            
+            previewPanel.style.right = 'auto';
+            previewPanel.style.bottom = 'auto';
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        function onMouseMove(e) {
+            if (!isDragging) return;
+            const newLeft = e.clientX - offsetX;
+            const newTop = e.clientY - offsetY;
+            previewPanel.style.left = `${newLeft}px`;
+            previewPanel.style.top = `${newTop}px`;
+        }
+
+        function onMouseUp() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+    document.getElementById('formCriarJogo').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = this;
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    // --- VERIFICAÇÃO FINAL ANTES DE GRAVAR ---
+    const { nomeJogo, dataJogo, equipaCasaId, equipaForaId } = data;
+
+    if (equipaCasaId === equipaForaId) {
+        alert("Erro: As equipas da casa e de fora não podem ser as mesmas.");
+        return;
+    }
+
+    // Query 1: Nome exato
+    const qNome = query(collection(db, "jogos"), where("nomeJogo", "==", nomeJogo));
+    
+    // Query 2: Casa vs Fora na data
+    const qCombinacao1 = query(collection(db, "jogos"), 
+        where("dataJogo", "==", dataJogo),
+        where("equipaCasaId", "==", equipaCasaId),
+        where("equipaForaId", "==", equipaForaId)
+    );
+
+    // Query 3: Fora vs Casa na data
+    const qCombinacao2 = query(collection(db, "jogos"), 
+        where("dataJogo", "==", dataJogo),
+        where("equipaCasaId", "==", equipaForaId), // Invertido
+        where("equipaForaId", "==", equipaCasaId)  // Invertido
+    );
+    
+    const [snapNome, snapCombinacao1, snapCombinacao2] = await Promise.all([
+        getDocs(qNome), getDocs(qCombinacao1), getDocs(qCombinacao2)
+    ]);
+
+    if (!snapNome.empty || !snapCombinacao1.empty || !snapCombinacao2.empty) {
+        alert("Erro: O jogo que está a tentar criar já existe (mesmas equipas na mesma data).");
+        return; // Impede a submissão
+    }
+    // --- FIM DA VERIFICAÇÃO ---
+    
+    data.competicaoNome = tsJogoCompeticao.options[data.competicaoId]?.nome;
+    data.equipaCasaNome = tsJogoEquipaCasa.options[data.equipaCasaId]?.nome;
+    data.equipaForaNome = tsJogoEquipaFora.options[data.equipaForaId]?.nome;
+
+    const useLinkOnly = document.getElementById('useLinkOnlyCheckbox').checked;
+    if (data.videoUrl && useLinkOnly) {
+        data.apiYt = true;
+    }
+
+    try {
+        await addDoc(collection(db, "jogos"), data);
+        alert("Jogo criado!");
+        form.reset();
+        tsJogoCompeticao.clear();
+        resetEquipasDropdowns();
+        document.getElementById('jogoNomeError').textContent = ''; // Limpa o erro
+        document.querySelector('#formCriarJogo button[type="submit"]').disabled = false; // Reativa o botão
+        hidePanel();
+    } catch (err) {
+        alert("Erro: " + err.message);
+    }
+});
+
+        document.getElementById('formCriarJogador').addEventListener('submit', async function(e) { e.preventDefault(); try { await addDoc(collection(db, "jogadores"), Object.fromEntries(new FormData(this).entries())); alert("Jogador criado!"); this.reset(); } catch(err){ alert("Erro: "+err.message); }});
+        
+        document.getElementById('formCriarEquipa').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fd = new FormData(this);
+            const d = Object.fromEntries(fd.entries());
+            const nomeEquipaParaVerificar = d.nome.trim().toLowerCase();
+            const existe = allClubs.some(club => club.nome.toLowerCase() === nomeEquipaParaVerificar);
+
+            if (existe) {
+                alert("Este clube já existe na base de dados!");
+                return;
+            }
+
+            d.competicoesIds = fd.getAll('competicoesIds');
+            const preSeasonCompetition = allCompetitions.find(comp => comp.nome && comp.nome.trim().toLowerCase() === 'pre season');
+            if (preSeasonCompetition && !d.competicoesIds.includes(preSeasonCompetition.id)) {
+                d.competicoesIds.push(preSeasonCompetition.id);
+            }
+
+            try {
+                await addDoc(collection(db, "clubes"), d);
+                alert("Equipa criada!");
+                this.reset();
+                document.getElementById('equipaNomeError').textContent = ''; 
+                fetchAllInitialData(); 
+            } catch(err){
+                alert("Erro: "+err.message);
+            }
+        });
+
+        document.getElementById('formCriarCompeticao').addEventListener('submit', async function(e) { e.preventDefault(); const d = Object.fromEntries(new FormData(this).entries()); if(d.posicaoMenu) d.posicaoMenu = parseInt(d.posicaoMenu); else delete d.posicaoMenu; try { await addDoc(collection(db, "competicoes"), d); alert("Competição criada!"); this.reset(); fetchAllInitialData(); } catch(err){ alert("Erro: "+err.message); }});
+document.getElementById('formCriarPais').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = this;
+    const d = Object.fromEntries(new FormData(form).entries());
+    const nomePaisParaVerificar = d.nome.trim().toLowerCase();
+    
+    // Verifica se o país já existe no array `allPaises`
+    const existe = allPaises.some(pais => pais.nome.toLowerCase() === nomePaisParaVerificar);
+
+    if (existe) {
+        alert("Este país já existe na base de dados!");
+        return; // Impede o envio do formulário
+    }
+
+    try {
+        await addDoc(collection(db, "paises"), d);
+        alert("País criado!");
+        form.reset();
+        document.getElementById('paisNomeError').textContent = ''; // Limpa a mensagem de erro após sucesso
+        fetchAllInitialData(); // Atualiza a lista de países
+    } catch(err) {
+        alert("Erro: " + err.message);
+    }
+});
+        document.getElementById('formCriarTemporada').addEventListener('submit', async function(e) { e.preventDefault(); try { await addDoc(collection(db, "temporadas"), Object.fromEntries(new FormData(this).entries())); alert("Temporada criada!"); this.reset(); fetchAllInitialData(); } catch(err){ alert("Erro: "+err.message); }});
+
+        function populateCompetitionsForJogo() {
+            if (!tsJogoCompeticao) return;
+            const filtered = allCompetitions.filter(c => c.genero === singleGameElements.genero.value);
+            tsJogoCompeticao.clear(); tsJogoCompeticao.clearOptions(); tsJogoCompeticao.addOptions(filtered);
+            resetEquipasDropdowns();
+        }
+        function populateEquipasForJogo() {
+            if (!tsJogoCompeticao || !tsJogoEquipaCasa) return;
+            const competicaoId = tsJogoCompeticao.getValue();
+            if(!competicaoId) { resetEquipasDropdowns(); return; }
+            const filtered = allClubs.filter(c => c.genero === singleGameElements.genero.value && c.competicoesIds?.includes(competicaoId));
+            const casaVal = tsJogoEquipaCasa.getValue(), foraVal = tsJogoEquipaFora.getValue();
+            tsJogoEquipaCasa.clear(); tsJogoEquipaCasa.clearOptions(); tsJogoEquipaCasa.addOptions(filtered);
+            tsJogoEquipaFora.clear(); tsJogoEquipaFora.clearOptions(); tsJogoEquipaFora.addOptions(filtered);
+            if(filtered.some(c=>c.id===casaVal)) tsJogoEquipaCasa.setValue(casaVal, true);
+            if(filtered.some(c=>c.id===foraVal)) tsJogoEquipaFora.setValue(foraVal, true);
+        }
+        function resetEquipasDropdowns() { if(tsJogoEquipaCasa) { tsJogoEquipaCasa.clear(); tsJogoEquipaCasa.clearOptions(); tsJogoEquipaFora.clear(); tsJogoEquipaFora.clearOptions(); } }
+function updateResultadoFinal() {
+    const resCasaVal = singleGameElements.resCasa.value;
+    const resForaVal = singleGameElements.resFora.value;
+
+    // Verifica se ambos os valores são strings não vazias (o que inclui "0")
+    if (resCasaVal !== '' && resForaVal !== '') {
+        singleGameElements.resFinal.value = `${resCasaVal}-${resForaVal}`;
+    } else {
+        // Se um deles não for selecionado, o resultado final fica vazio
+        singleGameElements.resFinal.value = '';
+    }
+    
+    // Chama a atualização do nome do jogo, que agora terá o valor correto (ex: "0-0")
+    updateNomeJogo();
+}
+
+        async function updateNomeJogo() {
+    if (!tsJogoEquipaCasa || !tsJogoEquipaCasa.options) return;
+    const { nomeJogo, data } = singleGameElements;
+    const casaId = tsJogoEquipaCasa.getValue(), foraId = tsJogoEquipaFora.getValue();
+    
+    const errorSpan = document.getElementById('jogoNomeError');
+    const submitBtn = document.querySelector('#formCriarJogo button[type="submit"]');
+
+    if(!casaId || !foraId || !data.value || casaId === foraId) {
+        nomeJogo.value = '';
+        errorSpan.textContent = (casaId && foraId && casaId === foraId) ? "As equipas devem ser diferentes." : "";
+        submitBtn.disabled = (casaId === foraId);
+        return;
+    }
+    
+    const casaNome = tsJogoEquipaCasa.options[casaId]?.nome;
+    const foraNome = tsJogoEquipaFora.options[foraId]?.nome;
+    if(!casaNome || !foraNome) return;
+    
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const resultado = new Date(data.value + 'T00:00:00') >= hoje ? 'X' : singleGameElements.resFinal.value;
+    const [y,m,d] = data.value.split('-');
+    const nomeJogoCalculado = `${casaNome} ${resultado} ${foraNome} - ${d}/${m}/${y}`;
+    nomeJogo.value = nomeJogoCalculado;
+
+    // --- LÓGICA DE VERIFICAÇÃO AVANÇADA ---
+    let gameExists = false;
+    let errorMessage = "";
+    const dataJogo = data.value;
+
+    // Query 1: Verifica o nome exato do jogo
+    const qNome = query(collection(db, "jogos"), where("nomeJogo", "==", nomeJogoCalculado));
+    
+    // Query 2: Verifica Casa vs Fora na mesma data
+    const qCombinacao1 = query(collection(db, "jogos"), 
+        where("dataJogo", "==", dataJogo),
+        where("equipaCasaId", "==", casaId),
+        where("equipaForaId", "==", foraId)
+    );
+
+    // Query 3: Verifica Fora vs Casa na mesma data
+    const qCombinacao2 = query(collection(db, "jogos"), 
+        where("dataJogo", "==", dataJogo),
+        where("equipaCasaId", "==", foraId), // Invertido
+        where("equipaForaId", "==", casaId)  // Invertido
+    );
+
+    // Executa todas as consultas em paralelo para eficiência
+    const [snapNome, snapCombinacao1, snapCombinacao2] = await Promise.all([
+        getDocs(qNome),
+        getDocs(qCombinacao1),
+        getDocs(qCombinacao2)
+    ]);
+
+    if (!snapNome.empty) {
+        gameExists = true;
+        errorMessage = "Este jogo (nome exato) já existe!";
+    } else if (!snapCombinacao1.empty || !snapCombinacao2.empty) {
+        gameExists = true;
+        errorMessage = "Já existe um jogo entre estas duas equipas nesta data.";
+    }
+
+    // Atualiza a UI com o resultado
+    if (gameExists) {
+        errorSpan.textContent = errorMessage;
+        submitBtn.disabled = true;
+    } else {
+        errorSpan.textContent = "";
+        submitBtn.disabled = false;
+    }
+}
+        async function calculateNextJornada() {
+            if (!tsJogoEquipaCasa) return;
+            const { jornada, temporada } = singleGameElements;
+            const casaId = tsJogoEquipaCasa.getValue(), compId = tsJogoCompeticao.getValue();
+            if (!casaId || !temporada.value || !compId) return;
+            const q = query(collection(db, "jogos"), where("equipaCasaId", "==", casaId), where("temporada", "==", temporada.value), where("competicaoId", "==", compId));
+            const querySnapshot = await getDocs(q);
+            let maxJornada = 0;
+            querySnapshot.forEach(doc => { if (parseInt(doc.data().jornada) > maxJornada) maxJornada = parseInt(doc.data().jornada); });
+            jornada.value = maxJornada < 40 ? maxJornada + 1 : 1;
+        }
+
+       function setupEventListeners() {
+    // Listeners originais
+    bulkModalElements.genero.addEventListener('change', populateBulkModalDropdowns);
+    singleGameElements.genero.addEventListener('change', populateCompetitionsForJogo);
+    tsJogoCompeticao.on('change', () => { 
+        populateEquipasForJogo(); 
+        calculateNextJornada(); 
+    });
+    tsJogoEquipaCasa.on('change', updateNomeJogo);
+    tsJogoEquipaFora.on('change', updateNomeJogo);
+    singleGameElements.data.addEventListener('change', updateNomeJogo);
+    singleGameElements.resCasa.addEventListener('change', updateResultadoFinal);
+    singleGameElements.resFora.addEventListener('change', updateResultadoFinal);
+    tsJogoEquipaCasa.on('change', calculateNextJornada);
+    singleGameElements.temporada.addEventListener('change', calculateNextJornada);
+
+    // Listener adicionado para o botão de pesquisa do YouTube
+    document.getElementById('searchOnYTBtn').addEventListener('click', function() {
+        const gameName = document.getElementById('jogoNomeJogo').value;
+        if (gameName.trim()) {
+            // Remove a data e o resultado para uma pesquisa mais limpa
+            const searchTerm = gameName.split(' - ')[0] + ' highlights';
+            const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
+            window.open(youtubeUrl, '_blank');
+        } else {
+            alert('O nome do jogo precisa ser gerado primeiro para fazer a pesquisa.');
+        }
+    });
+}
+
+      async function fetchAllInitialData() {
+            try {
+                const snaps = await Promise.all([ getDocs(query(collection(db, "paises"), orderBy("nome"))), getDocs(query(collection(db, "competicoes"), orderBy("nome"))), getDocs(query(collection(db, "clubes"), orderBy("nome"))), getDocs(query(collection(db, "temporadas"), orderBy("nome", "desc"))) ]);
+                allPaises = snaps[0].docs.map(d => ({id:d.id, ...d.data()}));
+                allCompetitions = snaps[1].docs.map(d => ({id:d.id, ...d.data()}));
+                allClubs = snaps[2].docs.map(d => ({id:d.id, ...d.data()}));
+                allSeasons = snaps[3].docs.map(d => ({id:d.id, ...d.data()}));
+                
+                if (!isInitialized) {
+                    const singleSelectOptions = { render: renderWithLogo, valueField: 'id', labelField: 'nome', searchField: ['nome'] };
+                    const multiSelectCheckboxOptions = { plugins: ['checkbox_options'], render: renderWithLogo, valueField: 'id', labelField: 'nome', searchField: ['nome'], placeholder: 'Selecione uma ou mais competições...', closeAfterSelect: false };
+
+                    tsBulkCompeticao = new TomSelect(bulkModalElements.competicao, singleSelectOptions);
+                    tsJogoCompeticao = new TomSelect(singleGameElements.competicao, singleSelectOptions);
+                    tsJogoEquipaCasa = new TomSelect(singleGameElements.equipaCasa, singleSelectOptions);
+                    tsJogoEquipaFora = new TomSelect(singleGameElements.equipaFora, singleSelectOptions);
+                    tsEquipaCompeticoes = new TomSelect('#equipaCompeticoes', multiSelectCheckboxOptions);
+                    
+                    setupEventListeners();
+
+                  // CÓDIGO NOVO PARA VALIDAR O PAÍS
+    const paisNomeInput = document.getElementById('paisNome');
+    const paisNomeErrorSpan = document.getElementById('paisNomeError');
+    paisNomeInput.addEventListener('input', (e) => {
+        const nomeAtual = e.target.value.trim().toLowerCase();
+        if (nomeAtual === '') {
+            paisNomeErrorSpan.textContent = '';
+            return;
+        }
+        // A variável `allPaises` já está preenchida nesta fase
+        const existe = allPaises.some(pais => pais.nome.toLowerCase() === nomeAtual);
+        paisNomeErrorSpan.textContent = existe ? 'Este país já existe!' : '';
+    });
+
+    isInitialized = true;
+}
+
+                populateBulkModalDropdowns();
+                populateIndividualTabDropdowns();
+                populateCompetitionsForJogo();
+                
+                const { resCasa, resFora, jornada, temporada } = singleGameElements;
+               if(resCasa.innerHTML === '') {
+    for(let i=0; i<=9; i++) { resCasa.innerHTML += `<option value="${i}">${i}</option>`; resFora.innerHTML += `<option value="${i}">${i}</option>`; }
+for(let i=1; i<=40; i++) { jornada.innerHTML += `<option value="${i}">${i}</option>`; }
+}
+// LINHA ADICIONADA: Define o estado inicial do resultado final para "0-0"
+updateResultadoFinal();
+                temporada.innerHTML = '';
+                allSeasons.forEach(s => { temporada.innerHTML += `<option value="${s.nome}">${s.nome}</option>`; });
+                if(temporada.options.length > 0) temporada.selectedIndex = 0;
+
+            } catch (error) { 
+                if (!error.message.includes("Tom Select")) { console.error("Error fetching data: ", error); alert("Falha ao carregar dados: " + error.message); }
+            }
+        }
+      
+        function populateIndividualTabDropdowns() {
+             [document.getElementById('jogadorNacionalidade'), document.getElementById('equipaPais'), document.getElementById('competicaoPais')].forEach(sel => {
+                 if(sel) {
+                     sel.innerHTML = '<option value="">Selecione...</option>';
+                     allPaises.forEach(item => { sel.innerHTML += `<option value="${item.id}">${item.nome}</option>`; });
+                 }
+             });
+             
+             if (tsEquipaCompeticoes) {
+                 tsEquipaCompeticoes.clear();
+                 tsEquipaCompeticoes.clearOptions();
+                 tsEquipaCompeticoes.addOptions(allCompetitions);
+                 const preSeasonComp = allCompetitions.find(comp => comp.nome && comp.nome.trim().toLowerCase() === 'pre season');
+                 if (preSeasonComp) {
+                     tsEquipaCompeticoes.setValue([preSeasonComp.id]);
+                 } else {
+                     console.warn("A competição 'Pre Season' não foi encontrada para pré-seleção.");
+                 }
+             }
+        }
+        
+        document.addEventListener('DOMContentLoaded', fetchAllInitialData);
+    </script>
+    
+    <div id="videoPreviewPanel" class="floating-panel">
+        <div class="panel-header">
+            <h4>Pré-visualização do Vídeo</h4>
+            <span id="closePreviewBtn" title="Fechar">×</span>
+        </div>
+        <div id="videoEmbedContainer"></div>
+        <div class="panel-footer">
+            <label>
+                <input type="checkbox" id="useLinkOnlyCheckbox">
+                Usar apenas link (não incorporar)
+            </label>
+        </div>
+    </div>
+
+</body>
+</html>
