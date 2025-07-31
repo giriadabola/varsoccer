@@ -427,12 +427,29 @@
         function populateAllFormDropdowns() {
              const temporadaSelect = document.getElementById('jogoTemporada');
              temporadaSelect.innerHTML = '';
-             allData.temporadas.forEach(s => { temporadaSelect.innerHTML += `<option value="${s.nome}">${s.nome}</option>`; });
-             if(document.getElementById('jogoResultadoCasa').innerHTML === '') {
-                const resCasa = document.getElementById('jogoResultadoCasa'), resFora = document.getElementById('jogoResultadoFora'), jornada = document.getElementById('jogoJornada');
-                for(let i=0; i<=9; i++) { resCasa.innerHTML += `<option value="${i}">${i}</option>`; resFora.innerHTML += `<option value="${i}">${i}</option>`; }
-                for(let i=1; i<=40; i++) { jornada.innerHTML += `<option value="${i}">${i}</option>`; }
-             }
+           if(document.getElementById('jogoResultadoCasa').innerHTML === '') {
+    const resCasa = document.getElementById('jogoResultadoCasa');
+    const resFora = document.getElementById('jogoResultadoFora');
+    const jornada = document.getElementById('jogoJornada');
+
+    // Preenche os resultados de 0 a 9
+    for(let i=0; i<=9; i++) { 
+        resCasa.innerHTML += `<option value="${i}">${i}</option>`; 
+        resFora.innerHTML += `<option value="${i}">${i}</option>`; 
+    }
+
+    // Preenche as jornadas de 1 a 40
+    for(let i=1; i<=40; i++) { 
+        jornada.innerHTML += `<option value="${i}">${i}</option>`; 
+    }
+    
+    // Adiciona as fases especiais ao dropdown de jornada
+    const specialStages = ['1PE', '2PE', '3PE', 'POff', '1/8', 'QF', 'MF', '1F', 'F'];
+    specialStages.forEach(stage => {
+        jornada.innerHTML += `<option value="${stage}">${stage}</option>`;
+    });
+}
+
              const paisesSelects = [document.getElementById('jogadorNacionalidade'), document.getElementById('equipaPais'), document.getElementById('competicaoPais')];
              paisesSelects.forEach(sel => {
                 sel.innerHTML = ''; allData.paises.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.nome}</option>`; });
