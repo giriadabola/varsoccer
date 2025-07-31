@@ -47,7 +47,6 @@
         .result-pickcard img { width: 24px; height: 24px; object-fit: contain; }
         .result-pickcard span { font-size: 0.8rem; font-weight: bold; margin: 0 5px; }
 
-        /* (Resto do CSS continua igual) */
         .content-wrapper { display: flex; flex-grow: 1; overflow: hidden; }
         .sidebar { width: 280px; flex-shrink: 0; background-color: #ffffff; padding: 15px; overflow-y: auto; border-right: 1px solid #dddfe2; display: flex; flex-direction: column;}
         #sidebar-search-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; }
@@ -56,6 +55,21 @@
         .competition-item:hover { background-color: #f0f2f5; }
         .competition-logo { width: 24px; height: 24px; object-fit: contain; margin-right: 10px; }
         .competition-name { font-weight: 500; font-size: 0.85rem; }
+        
+        /* --- ESTILOS PARA A NOVA SIDEBAR --- */
+        .sidebar-divider { margin: 12px 0; border: none; border-top: 1px solid #dddfe2; }
+        .country-group { margin-bottom: 4px; }
+        .country-header { display: flex; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease-in-out; position: relative; }
+        .country-header:hover { background-color: #f0f2f5; }
+        .country-header.active { background-color: #e7f3ff; }
+        .country-header::after { content: '›'; font-size: 1.5rem; color: #606770; position: absolute; right: 10px; transition: transform 0.3s ease; }
+        .country-header.active::after { transform: rotate(90deg); }
+        .country-flag { width: 24px; height: 16px; object-fit: cover; margin-right: 10px; border: 1px solid #eee; border-radius: 2px; }
+        .country-name { font-weight: 500; font-size: 0.9rem; }
+        .country-competitions-list { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; padding-left: 15px; margin-left: 18px; border-left: 2px solid #e9ecef; }
+        .competition-item.nested { padding-left: 5px; }
+        .competition-item.nested .competition-name { font-weight: 400; font-size: 0.8rem; }
+        
         .main-content-scroll-container { flex-grow: 1; overflow-y: auto; background-color: #f9f9f9; }
         .main-content { padding: 20px; }
         .main-content h2 { font-size: 1.5rem; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
@@ -146,9 +160,6 @@
         // --- FUNÇÕES AUXILIARES ---
         const formatDate = (date) => new Date(date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
-        /**
-         * Função auxiliar para converter uma string de data (DD/MM/YYYY ou YYYY-MM-DD) para um objeto Date.
-         */
         function parseDate(dateString) {
             if (!dateString) return new Date(null);
             if (dateString.includes('-')) { return new Date(dateString); }
@@ -159,34 +170,147 @@
         
         async function fetchAndStoreClubs() { if (clubsMap.size > 0) return; const s = await getDocs(collection(db, 'clubes')); s.forEach(d => clubsMap.set(d.id, { id: d.id, ...d.data() })); }
         async function fetchAndStoreCompetitions() { competitionsMap.clear(); const s = await getDocs(query(collection(db, 'competicoes'), orderBy('nome'))); s.forEach(d => competitionsMap.set(d.id, { id: d.id, ...d.data() })); }
-        async function fetchAndStoreCountries() { if (countriesMap.size > 0) return; const s = await getDocs(collection(db, 'paises')); s.forEach(d => countriesMap.set(d.id, d.data())); }
+        async function fetchAndStoreCountries() { if (countriesMap.size > 0) return; const s = await getDocs(collection(db, 'paises')); s.forEach(d => countriesMap.set(d.id, { id: d.id, ...d.data()})); }
         
-        // --- FUNÇÕES DE RENDERIZAÇÃO ---
+        // --- FUNÇÕES DE RENDERIZAÇÃO DA SIDEBAR ---
         async function fetchAndRenderSidebar() {
             const listElement = document.getElementById('competition-list');
             try {
-                const q = query(collection(db, 'competicoes'), where("noMenu", "==", "Yes"), orderBy("posicaoMenu"));
-                const snapshot = await getDocs(q);
-                listElement.innerHTML = !snapshot.empty ? '' : '<p>Nenhuma competição encontrada.</p>';
-                snapshot.forEach(doc => {
-                    const comp = doc.data();
-                    listElement.innerHTML += `<a href="competition.html?id=${doc.id}" class="competition-item" data-namming="${comp.namming || ''}"><img src="${comp.logoUrl}" class="competition-logo"><span class="competition-name">${comp.nome}</span></a>`;
+                const topCompetitions = [];
+                const competitionsByCountry = new Map();
+
+                for (const comp of competitionsMap.values()) {
+                    if (comp.posicaoMenu && !isNaN(parseInt(comp.posicaoMenu))) {
+                        topCompetitions.push(comp);
+                    }
+                    if (comp.paisId) {
+                        if (!competitionsByCountry.has(comp.paisId)) {
+                            competitionsByCountry.set(comp.paisId, []);
+                        }
+                        competitionsByCountry.get(comp.paisId).push(comp);
+                    }
+                }
+
+                topCompetitions.sort((a, b) => a.posicaoMenu - b.posicaoMenu);
+
+                const countriesWithCompetitions = [];
+                for (const paisId of competitionsByCountry.keys()) {
+                    if (countriesMap.has(paisId)) {
+                        countriesWithCompetitions.push(countriesMap.get(paisId));
+                    }
+                }
+                countriesWithCompetitions.sort((a, b) => a.nome.localeCompare(b.nome));
+
+                let html = '';
+                topCompetitions.forEach(comp => {
+                    html += `<a href="competition.html?id=${comp.id}" class="competition-item" data-namming="${comp.namming || ''}"><img src="${comp.logoUrl}" class="competition-logo"><span class="competition-name">${comp.nome}</span></a>`;
                 });
-            } catch (error) { console.error("Error loading sidebar:", error); listElement.innerHTML = '<p>Error loading.</p>'; }
+
+                if (topCompetitions.length > 0 && countriesWithCompetitions.length > 0) {
+                    html += `<hr class="sidebar-divider">`;
+                }
+                
+                countriesWithCompetitions.forEach(country => {
+                    const countryId = country.id;
+                    const compsOfCountry = competitionsByCountry.get(countryId) || [];
+                    
+                    html += `
+                        <div class="country-group">
+                            <div class="country-header" data-country-id="${countryId}">
+                                <img src="${country.bandeiraUrl}" class="country-flag" alt="${country.nome}">
+                                <span class="country-name">${country.nome}</span>
+                            </div>
+                            <div class="country-competitions-list" id="comps-for-${countryId}">
+                                ${compsOfCountry.map(comp => `
+                                    <a href="competition.html?id=${comp.id}" class="competition-item nested" data-namming="${comp.namming || ''}">
+                                        <img src="${comp.logoUrl}" class="competition-logo">
+                                        <span class="competition-name">${comp.nome}</span>
+                                    </a>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                listElement.innerHTML = html || '<p>No competition found.</p>';
+
+                listElement.addEventListener('click', function(event) {
+                    const header = event.target.closest('.country-header');
+                    if (!header) return;
+
+                    const content = header.nextElementSibling;
+                    header.classList.toggle('active');
+
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error loading sidebar:", error);
+                listElement.innerHTML = '<p>Error loading.</p>';
+            }
         }
 
         function setupSidebarFilter() {
-            document.getElementById('sidebar-search-input').addEventListener('keyup', (e) => {
+            const searchInput = document.getElementById('sidebar-search-input');
+            const competitionListContainer = document.getElementById('competition-list');
+
+            searchInput.addEventListener('keyup', (e) => {
                 const searchTerm = e.target.value.toLowerCase();
-                document.querySelectorAll('.competition-item').forEach(item => {
-                    const name = item.querySelector('.competition-name').textContent.toLowerCase();
-                    const namming = item.dataset.namming.toLowerCase();
-                    const isVisible = name.includes(searchTerm) || (namming && namming.includes(searchTerm));
-                    item.style.display = isVisible ? 'flex' : 'none';
+                const isSearching = searchTerm.length > 0;
+
+                const topLevelItems = competitionListContainer.querySelectorAll(':scope > .competition-item');
+                const divider = competitionListContainer.querySelector('.sidebar-divider');
+                const countryGroups = competitionListContainer.querySelectorAll('.country-group');
+                
+                topLevelItems.forEach(item => {
+                    item.style.display = isSearching ? 'none' : 'flex';
+                });
+
+                if (divider) {
+                    divider.style.display = isSearching ? 'none' : 'block';
+                }
+
+                countryGroups.forEach(group => {
+                    const countryName = group.querySelector('.country-name').textContent.toLowerCase();
+                    const nestedComps = group.querySelectorAll('.competition-item.nested');
+                    const header = group.querySelector('.country-header');
+                    const contentList = group.querySelector('.country-competitions-list');
+
+                    let hasVisibleChildren = false;
+
+                    nestedComps.forEach(comp => {
+                        const compName = comp.querySelector('.competition-name').textContent.toLowerCase();
+                        const compNamming = (comp.dataset.namming || '').toLowerCase();
+                        const isCompVisible = compName.includes(searchTerm) || compNamming.includes(searchTerm);
+                        
+                        comp.style.display = isCompVisible ? 'flex' : 'none';
+                        
+                        if (isCompVisible) {
+                            hasVisibleChildren = true;
+                        }
+                    });
+
+                    const isGroupVisible = countryName.includes(searchTerm) || hasVisibleChildren;
+                    group.style.display = isGroupVisible ? 'block' : 'none';
+
+                    const shouldExpand = isSearching && hasVisibleChildren;
+
+                    if (shouldExpand) {
+                        header.classList.add('active');
+                        contentList.style.maxHeight = contentList.scrollHeight + "px";
+                    } else {
+                        header.classList.remove('active');
+                        contentList.style.maxHeight = null;
+                    }
                 });
             });
         }
-
+        
+        // --- FUNÇÕES DE RENDERIZAÇÃO DO CONTEÚDO PRINCIPAL ---
         function renderHighlightsFilters() {
             const container = document.getElementById('highlights-filter-container');
             const grid = document.getElementById('latest-games-grid');
@@ -213,7 +337,6 @@
                         const q = query(collection(db, 'jogos'), where("competicaoId", "==", compId), orderBy("dataJogo", "desc"), limit(5));
                         const snapshot = await getDocs(q);
                         const competitionGames = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        // A mesma lógica de filtro precisa ser aplicada aqui também para consistência
                         const now = new Date();
                         now.setHours(0, 0, 0, 0);
                         const filteredCompetitionGames = competitionGames.filter(game => {
@@ -288,27 +411,58 @@
         }
 
         // --- FUNÇÕES DA PESQUISA GLOBAL ---
-        async function fetchLastGamesForTeam(teamId, limitNum = 3) { try{const e=query(collection(db,"jogos"),where("equipaCasaId","==",teamId)),t=query(collection(db,"jogos"),where("equipaForaId","==",teamId)),[a,n]=await Promise.all([getDocs(e),getDocs(t)]),o=a.docs.map(e=>({id:e.id,...e.data()})),r=n.docs.map(e=>({id:e.id,...e.data()}));return Array.from(new Map([...o,...r].map(e=>[e.id,e])).values()).sort((e,t)=>new Date(t.dataJogo)-new Date(e.dataJogo)).slice(0,limitNum)}catch(e){return console.error(`Erro ao buscar jogos para a equipa ${teamId}:`,e),[]} }
-        function findRecentTeamsForCompetition(compId, limit = 3) { const r=allFetchedGames.filter(g=>g.competicaoId===compId).sort((a,b)=>new Date(b.dataJogo)-new Date(a.dataJogo)),t=new Set;return r.forEach(g=>{t.size<2*limit&&(t.add(g.equipaCasaId),t.add(g.equipaForaId))}),Array.from(t).sort(()=>.5-Math.random()).slice(0,limit).map(id=>clubsMap.get(id)) }
+        async function fetchLastGamesForTeam(teamId, limitNum = 3) {
+            try {
+                const homeGamesQuery = query(collection(db, "jogos"), where("equipaCasaId", "==", teamId));
+                const awayGamesQuery = query(collection(db, "jogos"), where("equipaForaId", "==", teamId));
+                const [homeSnapshot, awaySnapshot] = await Promise.all([getDocs(homeGamesQuery), getDocs(awayGamesQuery)]);
+                const homeGames = homeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const awayGames = awaySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const allGames = Array.from(new Map([...homeGames, ...awayGames].map(game => [game.id, game])).values());
+
+                const validRecentGames = allGames
+                    .filter(game => {
+                        const result = game.resultadoFinal;
+                        return result && result.trim() !== '' && result.toUpperCase() !== 'X';
+                    })
+                    .sort((a, b) => new Date(b.dataJogo) - new Date(a.dataJogo))
+                    .slice(0, limitNum);
+
+                return validRecentGames;
+            } catch (error) {
+                console.error(`Erro ao buscar jogos para a equipa ${teamId}:`, error);
+                return [];
+            }
+        }
+
         async function loadAndRenderPickcards(teamId, type) {
             const containerId = `pickcards-for-${type}-${teamId}`;
             const container = document.getElementById(containerId);
             if (!container) return;
-            if (type === 'team') {
-                let games = await fetchLastGamesForTeam(teamId);
-                if (games.length > 0) {
-                    container.innerHTML = games.map(game => {
-                        const home = clubsMap.get(game.equipaCasaId);
-                        const away = clubsMap.get(game.equipaForaId);
-                        return home && away ? `<a href="game.html?id=${game.id}" class="result-pickcard" title="${game.nomeJogo}"><img src="${home.logoUrl}" alt="${home.nome}"><span>${game.resultadoFinal||"VS"}</span><img src="${away.logoUrl}" alt="${away.nome}"></a>` : '';
-                    }).join('');
-                } else { container.innerHTML = `<span style="font-size:0.8rem; color:#888;">No recent games found.</span>`; }
+
+            let games = await fetchLastGamesForTeam(teamId);
+
+            if (games.length > 0) {
+                container.innerHTML = games.map(game => {
+                    const home = clubsMap.get(game.equipaCasaId);
+                    const away = clubsMap.get(game.equipaForaId);
+                    if (home && away) {
+                        return `<a href="game.html?id=${game.id}" class="result-pickcard" title="${game.nomeJogo}"><img src="${home.logoUrl}" alt="${home.nome}"><span>${game.resultadoFinal}</span><img src="${away.logoUrl}" alt="${away.nome}"></a>`;
+                    }
+                    return '';
+                }).join('');
+            } else {
+                container.innerHTML = `<span style="font-size:0.8rem; color:#888;">No recent games found.</span>`;
             }
         }
+        
+        function findRecentTeamsForCompetition(compId, limit = 3) { const r=allFetchedGames.filter(g=>g.competicaoId===compId).sort((a,b)=>new Date(b.dataJogo)-new Date(a.dataJogo)),t=new Set;return r.forEach(g=>{t.size<2*limit&&(t.add(g.equipaCasaId),t.add(g.equipaForaId))}),Array.from(t).sort(()=>.5-Math.random()).slice(0,limit).map(id=>clubsMap.get(id)) }
+
         function renderSearchResults(teams, competitions) {
             const panel = document.getElementById('search-results-panel');
             if (teams.length === 0 && competitions.length === 0) { panel.style.display = 'none'; return; }
             let html = '';
+
             if (competitions.length > 0) {
                 html += '<div class="search-results-section"><h3>Competitions</h3>';
                 competitions.forEach(comp => {
@@ -330,6 +484,7 @@
             panel.style.display = 'block';
             teams.forEach(team => { loadAndRenderPickcards(team.id, 'team'); });
         }
+        
         function setupGlobalSearch() {
             const inputElement = document.getElementById('global-search-input');
             const panelElement = document.getElementById('search-results-panel');
@@ -348,40 +503,28 @@
             document.addEventListener('click', (event) => { if (!document.getElementById('global-search-container').contains(event.target)) { panelElement.style.display = 'none'; } });
         }
 
-        /**
-         * Função principal que busca os jogos, aplica o filtro, e atualiza a UI.
-         */
-       async function refreshGameDataAndUpdateUI() {
+        async function refreshGameDataAndUpdateUI() {
             try {
-                // 1. Definir o limite do dia de hoje para a consulta.
-                // Isso garante que só pegaremos jogos de hoje ou do passado.
                 const now = new Date();
                 const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-                const endOfTodayISO = endOfToday.toISOString().slice(0, 10); // Formato YYYY-MM-DD
+                const endOfTodayISO = endOfToday.toISOString().slice(0, 10);
 
-                // 2. Buscar os 100 jogos mais recentes DO PASSADO E DE HOJE.
-                // A cláusula 'where' é a correção chave.
                 const gamesQuery = query(
                     collection(db, 'jogos'), 
-                    where("dataJogo", "<=", endOfTodayISO), // <-- A CORREÇÃO ESTÁ AQUI
+                    where("dataJogo", "<=", endOfTodayISO),
                     orderBy("dataJogo", "desc"), 
                     limit(100)
                 );
                 
                 const snapshot = await getDocs(gamesQuery);
-
-                // Como a consulta já filtrou os jogos futuros, não precisamos mais do filtro complexo aqui.
-                // A lista de jogos do snapshot já é a lista correta.
                 allFetchedGames = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                // 3. Redesenhar os componentes da UI com a lista de jogos correta.
                 renderHighlightsFilters();
                 renderLatestFive(allFetchedGames);
                 renderFullList(allFetchedGames);
                 setupFilters(allFetchedGames);
             } catch(e) { 
                 console.error("Error refreshing game data:", e);
-                // Informar o usuário sobre o erro no UI, se apropriado
                 document.getElementById('latest-games-grid').innerHTML = '<p>Error loading matches.</p>';
                 document.getElementById('full-games-list').innerHTML = '<p>Error loading matches.</p>';
             }
@@ -391,13 +534,9 @@
             await Promise.all([ fetchAndStoreClubs(), fetchAndStoreCompetitions(), fetchAndStoreCountries() ]);
             await fetchAndRenderSidebar();
             setupSidebarFilter();
-            
-            // Faz o primeiro carregamento dos dados dos jogos (já com o filtro aplicado).
             await refreshGameDataAndUpdateUI(); 
-            
             setupGlobalSearch();
 
-            // Inicia o temporizador para fazer o refresh a cada 10 minutos.
             const refreshInterval = 10 * 60 * 1000;
             setInterval(refreshGameDataAndUpdateUI, refreshInterval);
         }
