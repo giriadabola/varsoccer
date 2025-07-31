@@ -84,6 +84,31 @@
     background-color: #c40303;
 }
    
+
+.tom-select-option-container, .tom-select-item-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+.option-flag, .item-flag {
+    height: 15px;
+    width: 20px;
+    margin-left: auto;   /* Mantém o alinhamento à direita */
+    margin-right: 15px;  /* ADICIONADO: Cria espaço para a scrollbar */
+    object-fit: contain;
+    vertical-align: middle;
+    flex-shrink: 0;      /* ADICIONADO: Impede que a bandeira encolha */
+}
+.ts-control .item-logo, .ts-dropdown .option-logo {
+    flex-shrink: 0; /* Impede que o logo encolha */
+}
+.ts-control .item-name, .ts-dropdown .option-name {
+    flex-grow: 1; /* Permite que o nome cresça para ocupar o espaço */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
    
    </style>
 </head>
@@ -265,9 +290,29 @@
         let isInitialized = false;
 
         const renderWithLogo = {
-            option: (data, escape) => `<div><img class="option-logo" src="${escape(data.logoUrl || 'https://via.placeholder.com/20')}" alt="Logo"> <span class="option-name">${escape(data.nome)}</span></div>`,
-            item: (data, escape) => `<div class="item"><img class="item-logo" src="${escape(data.logoUrl || 'https://via.placeholder.com/20')}" alt="Logo"> <span class="item-name">${escape(data.nome)}</span></div>`
-        };
+    option: (data, escape) => {
+        const pais = data.paisId ? allPaises.find(p => p.id === data.paisId) : null;
+        const bandeiraUrl = pais ? pais.bandeiraUrl : '';
+        const flagHtml = bandeiraUrl ? `<img class="option-flag" src="${escape(bandeiraUrl)}" alt="Bandeira">` : '';
+
+        return `<div class="tom-select-option-container">
+                    <img class="option-logo" src="${escape(data.logoUrl || 'https://via.placeholder.com/20')}" alt="Logo">
+                    <span class="option-name">${escape(data.nome)}</span>
+                    ${flagHtml}
+                </div>`;
+    },
+    item: (data, escape) => {
+        const pais = data.paisId ? allPaises.find(p => p.id === data.paisId) : null;
+        const bandeiraUrl = pais ? pais.bandeiraUrl : '';
+        const flagHtml = bandeiraUrl ? `<img class="item-flag" src="${escape(bandeiraUrl)}" alt="Bandeira">` : '';
+
+        return `<div class="tom-select-item-container">
+                    <img class="item-logo" src="${escape(data.logoUrl || 'https://via.placeholder.com/20')}" alt="Logo">
+                    <span class="item-name">${escape(data.nome)}</span>
+                    ${flagHtml}
+                </div>`;
+    }
+};
 
         window.openTab = (event, tabName) => {
             document.querySelectorAll(".tab-content").forEach(tc => { tc.style.display = "none"; tc.classList.remove("active"); });
@@ -625,17 +670,28 @@ document.getElementById('formCriarPais').addEventListener('submit', async functi
             tsJogoCompeticao.clear(); tsJogoCompeticao.clearOptions(); tsJogoCompeticao.addOptions(filtered);
             resetEquipasDropdowns();
         }
-        function populateEquipasForJogo() {
-            if (!tsJogoCompeticao || !tsJogoEquipaCasa) return;
-            const competicaoId = tsJogoCompeticao.getValue();
-            if(!competicaoId) { resetEquipasDropdowns(); return; }
-            const filtered = allClubs.filter(c => c.genero === singleGameElements.genero.value && c.competicoesIds?.includes(competicaoId));
-            const casaVal = tsJogoEquipaCasa.getValue(), foraVal = tsJogoEquipaFora.getValue();
-            tsJogoEquipaCasa.clear(); tsJogoEquipaCasa.clearOptions(); tsJogoEquipaCasa.addOptions(filtered);
-            tsJogoEquipaFora.clear(); tsJogoEquipaFora.clearOptions(); tsJogoEquipaFora.addOptions(filtered);
-            if(filtered.some(c=>c.id===casaVal)) tsJogoEquipaCasa.setValue(casaVal, true);
-            if(filtered.some(c=>c.id===foraVal)) tsJogoEquipaFora.setValue(foraVal, true);
-        }
+      function populateEquipasForJogo() {
+    if (!tsJogoEquipaCasa) return;
+    
+    // Filtra equipas apenas pelo GÉNERO selecionado
+    const filtered = allClubs.filter(c => c.genero === singleGameElements.genero.value);
+    
+    const casaVal = tsJogoEquipaCasa.getValue();
+    const foraVal = tsJogoEquipaFora.getValue();
+    
+    tsJogoEquipaCasa.clear();
+    tsJogoEquipaCasa.clearOptions();
+    tsJogoEquipaCasa.addOptions(filtered);
+    
+    tsJogoEquipaFora.clear();
+    tsJogoEquipaFora.clearOptions();
+    tsJogoEquipaFora.addOptions(filtered);
+    
+    // Tenta reaplicar os valores selecionados anteriormente se ainda forem válidos
+    if(filtered.some(c => c.id === casaVal)) tsJogoEquipaCasa.setValue(casaVal, true);
+    if(filtered.some(c => c.id === foraVal)) tsJogoEquipaFora.setValue(foraVal, true);
+}
+
         function resetEquipasDropdowns() { if(tsJogoEquipaCasa) { tsJogoEquipaCasa.clear(); tsJogoEquipaCasa.clearOptions(); tsJogoEquipaFora.clear(); tsJogoEquipaFora.clearOptions(); } }
 function updateResultadoFinal() {
     const resCasaVal = singleGameElements.resCasa.value;
@@ -736,14 +792,21 @@ function updateResultadoFinal() {
             jornada.value = maxJornada < 40 ? maxJornada + 1 : 1;
         }
 
-       function setupEventListeners() {
+     function setupEventListeners() {
     // Listeners originais
     bulkModalElements.genero.addEventListener('change', populateBulkModalDropdowns);
-    singleGameElements.genero.addEventListener('change', populateCompetitionsForJogo);
+    
+    // Alterado: O género agora popula tanto competições como equipas
+    singleGameElements.genero.addEventListener('change', () => {
+        populateCompetitionsForJogo();
+        populateEquipasForJogo();
+    });
+
+    // Alterado: A competição já não popula as equipas, apenas calcula a jornada
     tsJogoCompeticao.on('change', () => { 
-        populateEquipasForJogo(); 
         calculateNextJornada(); 
     });
+
     tsJogoEquipaCasa.on('change', updateNomeJogo);
     tsJogoEquipaFora.on('change', updateNomeJogo);
     singleGameElements.data.addEventListener('change', updateNomeJogo);
@@ -806,6 +869,7 @@ function updateResultadoFinal() {
                 populateBulkModalDropdowns();
                 populateIndividualTabDropdowns();
                 populateCompetitionsForJogo();
+                populateEquipasForJogo();
                 
                 const { resCasa, resFora, jornada, temporada } = singleGameElements;
                if(resCasa.innerHTML === '') {
