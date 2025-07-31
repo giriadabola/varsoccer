@@ -368,7 +368,7 @@
         
         function findTeamByName(name) { return allClubs.find(c => c.nome.toLowerCase() === name.trim().toLowerCase()) || null; }
 
-   bulkModalElements.generateBtn.addEventListener('click', async () => {
+  bulkModalElements.generateBtn.addEventListener('click', async () => {
     const { text, list, panel } = bulkModalElements;
     const rawText = text.value;
     if (!rawText.trim()) { alert("Por favor, cole os dados dos jogos."); return; }
@@ -377,10 +377,12 @@
     let gameCandidates = [];
     const nameCheckList = new Set();
     
-    // Expressões regulares com a hora opcional (da correção anterior)
-    const regexWithScore = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+(\d+-\d+)\s*(?:\([^\)]+\))?\s+(.+?)\s+\4\s+(J\d+|POff|F|1\/8|QF|MF|1F)/i;
-    const regexWithVs = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+vs\s*(?:\([^\)]+\))?\s+(.+?)\s+\3\s+(J\d+|POff|F|1\/8|QF|MF|1F)/i;
-    
+    // --- ALTERAÇÃO AQUI ---
+    // Adicionado suporte para 1PE, 2PE, 3PE com o padrão: |[1-3]PE
+    const regexWithScore = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+(\d+-\d+)\s*(?:\([^\)]+\))?\s+(.+?)\s+\4\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE)/i;
+    const regexWithVs = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+vs\s*(?:\([^\)]+\))?\s+(.+?)\s+\3\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE)/i;
+    // --- FIM DA ALTERAÇÃO ---
+
     const gameBlocks = rawText.split(/h2h/i).filter(block => block.trim() !== '');
 
     for (const block of gameBlocks) {
@@ -394,24 +396,17 @@
             const equipaForaNome = isFutureGame ? match[3].trim() : match[4].trim();
             const [resultadoCasa, resultadoFora] = isFutureGame ? [null, null] : match[3].split('-');
             
-            // --- INÍCIO DA ALTERAÇÃO ---
-            // 1. Captura o valor bruto da jornada (ex: "J6" ou "QF")
             let jornadaBruta = isFutureGame ? match[4] : match[5];
             let jornadaFinal;
 
-            // 2. Verifica se o valor começa com "J" (ignorando maiúsculas/minúsculas)
             if (jornadaBruta && jornadaBruta.toUpperCase().startsWith('J')) {
-                // 3. Se começar com "J", remove o primeiro caractere para obter só o número
                 jornadaFinal = jornadaBruta.substring(1);
             } else {
-                // 4. Caso contrário (é "QF", "F", etc.), mantém o valor original
                 jornadaFinal = jornadaBruta;
             }
-            // --- FIM DA ALTERAÇÃO ---
 
             const equipaCasa = findTeamByName(equipaCasaNome), equipaFora = findTeamByName(equipaForaNome);
 
-            // A variável `jornada` foi renomeada para `jornadaFinal` para usar o valor corrigido
             let candidate = { dataJogo, jornada: jornadaFinal, equipaCasaNome, equipaForaNome, resultadoCasa, resultadoFora, equipaCasaId: equipaCasa?.id || null, equipaForaId: equipaFora?.id || null, isValid: !!(equipaCasa && equipaFora), invalidReason: '' };
             
             if (!equipaCasa) candidate.invalidReason = `Equipa "${equipaCasaNome}" não encontrada.`;
@@ -426,7 +421,6 @@
         }
     }
 
-    // O resto da função permanece igual...
     const existingGames = new Set();
     if (nameCheckList.size > 0) {
         const namesToQuery = Array.from(nameCheckList);
@@ -451,7 +445,29 @@
 });
 
 
+  const equipaNomeInput = document.getElementById('equipaNome');
+    const equipaNomeErrorSpan = document.getElementById('equipaNomeError');
+    const equipaSubmitBtn = document.querySelector('#formCriarEquipa button[type="submit"]');
 
+    equipaNomeInput.addEventListener('input', (e) => {
+        const nomeAtual = e.target.value.trim().toLowerCase();
+        // Limpa o aviso se o campo estiver vazio
+        if (nomeAtual === '') {
+            equipaNomeErrorSpan.textContent = '';
+            equipaSubmitBtn.disabled = false;
+            return;
+        }
+        // Verifica se a equipa já existe na lista `allClubs`
+        const existe = allClubs.some(club => club.nome.toLowerCase() === nomeAtual);
+        
+        if (existe) {
+            equipaNomeErrorSpan.textContent = 'Este clube já existe!';
+            equipaSubmitBtn.disabled = true; // Desativa o botão de criar
+        } else {
+            equipaNomeErrorSpan.textContent = '';
+            equipaSubmitBtn.disabled = false; // Ativa o botão de criar
+        }
+    });
 
 
 
@@ -608,34 +624,36 @@
 
         document.getElementById('formCriarJogador').addEventListener('submit', async function(e) { e.preventDefault(); try { await addDoc(collection(db, "jogadores"), Object.fromEntries(new FormData(this).entries())); alert("Jogador criado!"); this.reset(); } catch(err){ alert("Erro: "+err.message); }});
         
-        document.getElementById('formCriarEquipa').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const fd = new FormData(this);
-            const d = Object.fromEntries(fd.entries());
-            const nomeEquipaParaVerificar = d.nome.trim().toLowerCase();
-            const existe = allClubs.some(club => club.nome.toLowerCase() === nomeEquipaParaVerificar);
+      document.getElementById('formCriarEquipa').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+    const d = Object.fromEntries(fd.entries());
+    const nomeEquipaParaVerificar = d.nome.trim().toLowerCase();
+    const errorSpan = document.getElementById('equipaNomeError');
+    const existe = allClubs.some(club => club.nome.toLowerCase() === nomeEquipaParaVerificar);
 
-            if (existe) {
-                alert("Este clube já existe na base de dados!");
-                return;
-            }
+    // A verificação é mantida como uma salvaguarda final
+    if (existe) {
+        errorSpan.textContent = "Este clube já existe na base de dados!";
+        return;
+    }
 
-            d.competicoesIds = fd.getAll('competicoesIds');
-            const preSeasonCompetition = allCompetitions.find(comp => comp.nome && comp.nome.trim().toLowerCase() === 'pre season');
-            if (preSeasonCompetition && !d.competicoesIds.includes(preSeasonCompetition.id)) {
-                d.competicoesIds.push(preSeasonCompetition.id);
-            }
+    d.competicoesIds = fd.getAll('competicoesIds');
+    const preSeasonCompetition = allCompetitions.find(comp => comp.nome && comp.nome.trim().toLowerCase() === 'pre season');
+    if (preSeasonCompetition && !d.competicoesIds.includes(preSeasonCompetition.id)) {
+        d.competicoesIds.push(preSeasonCompetition.id);
+    }
 
-            try {
-                await addDoc(collection(db, "clubes"), d);
-                alert("Equipa criada!");
-                this.reset();
-                document.getElementById('equipaNomeError').textContent = ''; 
-                fetchAllInitialData(); 
-            } catch(err){
-                alert("Erro: "+err.message);
-            }
-        });
+    try {
+        await addDoc(collection(db, "clubes"), d);
+        alert("Equipa criada!");
+        this.reset();
+        errorSpan.textContent = ''; // Limpa a mensagem de erro após o sucesso
+        fetchAllInitialData(); 
+    } catch(err){
+        alert("Erro: "+err.message);
+    }
+});
 
         document.getElementById('formCriarCompeticao').addEventListener('submit', async function(e) { e.preventDefault(); const d = Object.fromEntries(new FormData(this).entries()); if(d.posicaoMenu) d.posicaoMenu = parseInt(d.posicaoMenu); else delete d.posicaoMenu; try { await addDoc(collection(db, "competicoes"), d); alert("Competição criada!"); this.reset(); fetchAllInitialData(); } catch(err){ alert("Erro: "+err.message); }});
 document.getElementById('formCriarPais').addEventListener('submit', async function(e) {
