@@ -780,17 +780,33 @@ function updateResultadoFinal() {
         submitBtn.disabled = false;
     }
 }
-        async function calculateNextJornada() {
-            if (!tsJogoEquipaCasa) return;
-            const { jornada, temporada } = singleGameElements;
-            const casaId = tsJogoEquipaCasa.getValue(), compId = tsJogoCompeticao.getValue();
-            if (!casaId || !temporada.value || !compId) return;
-            const q = query(collection(db, "jogos"), where("equipaCasaId", "==", casaId), where("temporada", "==", temporada.value), where("competicaoId", "==", compId));
-            const querySnapshot = await getDocs(q);
-            let maxJornada = 0;
-            querySnapshot.forEach(doc => { if (parseInt(doc.data().jornada) > maxJornada) maxJornada = parseInt(doc.data().jornada); });
-            jornada.value = maxJornada < 40 ? maxJornada + 1 : 1;
+    async function calculateNextJornada() {
+    if (!tsJogoEquipaCasa) return;
+    const { jornada, temporada } = singleGameElements;
+    const casaId = tsJogoEquipaCasa.getValue(), compId = tsJogoCompeticao.getValue();
+    if (!casaId || !temporada.value || !compId) return;
+    
+    const q = query(collection(db, "jogos"), where("equipaCasaId", "==", casaId), where("temporada", "==", temporada.value), where("competicaoId", "==", compId));
+    const querySnapshot = await getDocs(q);
+    
+    let maxJornada = 0;
+    querySnapshot.forEach(doc => {
+        const jValue = parseInt(doc.data().jornada);
+        // Apenas considera se for um número válido
+        if (!isNaN(jValue) && jValue > maxJornada) {
+            maxJornada = jValue;
         }
+    });
+
+    // Se a última jornada foi um número e menor que 40, sugere a próxima. Caso contrário, volta para 1.
+    if (maxJornada > 0 && maxJornada < 40) {
+        jornada.value = maxJornada + 1;
+    } else if (maxJornada >= 40) {
+        jornada.value = 40; // Mantém em 40 se já for o máximo
+    } else {
+        jornada.value = 1; // Padrão se não houver jornadas numéricas
+    }
+}
 
      function setupEventListeners() {
     // Listeners originais
@@ -872,10 +888,25 @@ function updateResultadoFinal() {
                 populateEquipasForJogo();
                 
                 const { resCasa, resFora, jornada, temporada } = singleGameElements;
-               if(resCasa.innerHTML === '') {
-    for(let i=0; i<=9; i++) { resCasa.innerHTML += `<option value="${i}">${i}</option>`; resFora.innerHTML += `<option value="${i}">${i}</option>`; }
-for(let i=1; i<=40; i++) { jornada.innerHTML += `<option value="${i}">${i}</option>`; }
+             if(resCasa.innerHTML === '') {
+    // Preenche os dropdowns de resultado
+    for(let i=0; i<=9; i++) { 
+        resCasa.innerHTML += `<option value="${i}">${i}</option>`; 
+        resFora.innerHTML += `<option value="${i}">${i}</option>`; 
+    }
+    
+    // Preenche o dropdown de jornada com os números 1-40
+    for(let i=1; i<=40; i++) { 
+        jornada.innerHTML += `<option value="${i}">${i}</option>`; 
+    }
+    
+    // Adiciona as fases especiais ao dropdown de jornada
+    const specialStages = ['1PE', '2PE', '3PE', 'POff', '1/8', 'QF', 'MF', '1F', 'F'];
+    specialStages.forEach(stage => {
+        jornada.innerHTML += `<option value="${stage}">${stage}</option>`;
+    });
 }
+
 // LINHA ADICIONADA: Define o estado inicial do resultado final para "0-0"
 updateResultadoFinal();
                 temporada.innerHTML = '';
