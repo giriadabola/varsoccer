@@ -254,39 +254,45 @@
             }
         }
         
-        async function handleFormSubmit(e, collectionName, id) {
-            e.preventDefault();
-            if (!id) return;
+      async function handleFormSubmit(e, collectionName, id) {
+    e.preventDefault();
+    if (!id) return;
 
-            const form = e.target;
-            const data = Object.fromEntries(new FormData(form).entries());
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form).entries());
 
-            // Handle specific field types
-            if (collectionName === 'clubes') {
-                data.competicoesIds = Array.from(new FormData(form).getAll('competicoesIds'));
-            }
-            if (collectionName === 'competicoes') {
-                data.posicaoMenu = data.posicaoMenu ? parseInt(data.posicaoMenu, 10) : 99;
-            }
-            if(collectionName === 'equipa') {
-                 data.capacidadeEstadio = data.capacidadeEstadio ? parseInt(data.capacidadeEstadio, 10) : 0;
-            }
+    // Handle specific field types
+    if (collectionName === 'clubes') {
+        data.competicoesIds = Array.from(new FormData(form).getAll('competicoesIds'));
+    }
+    
+    // --- INÍCIO DA MODIFICAÇÃO ---
+    if (collectionName === 'competicoes') {
+        // Se o campo 'posicaoMenu' não estiver vazio, converte para número.
+        // Se estiver vazio, define como null para ser salvo no banco de dados.
+        data.posicaoMenu = data.posicaoMenu ? parseInt(data.posicaoMenu, 10) : null;
+    }
+    // --- FIM DA MODIFICAÇÃO ---
+    
+    if(collectionName === 'equipa') {
+         data.capacidadeEstadio = data.capacidadeEstadio ? parseInt(data.capacidadeEstadio, 10) : 0;
+    }
 
-            try {
-                const itemRef = doc(db, collectionName, id);
-                await updateDoc(itemRef, data);
-                const prefix = nameMap[collectionName];
-                alert(`${prefix} salvo com sucesso!`);
-                form.reset();
-                document.getElementById(`fieldset${prefix}`).disabled = true;
-                if (ts[`search${prefix}`]) ts[`search${prefix}`].clear();
-                currentlyEditing[collectionName] = null;
-                await fetchAllInitialData(); // Await the refresh
-            } catch (err) {
-                console.error("Erro ao salvar:", err);
-                alert("Erro ao salvar: " + err.message);
-            }
-        }
+    try {
+        const itemRef = doc(db, collectionName, id);
+        await updateDoc(itemRef, data);
+        const prefix = nameMap[collectionName];
+        alert(`${prefix} salvo com sucesso!`);
+        form.reset();
+        document.getElementById(`fieldset${prefix}`).disabled = true;
+        if (ts[`search${prefix}`]) ts[`search${prefix}`].clear();
+        currentlyEditing[collectionName] = null;
+        await fetchAllInitialData(); // Await the refresh
+    } catch (err) {
+        console.error("Erro ao salvar:", err);
+        alert("Erro ao salvar: " + err.message);
+    }
+}
         
    function loadSelectedItem(collectionName, id) {
             const item = allData[collectionName].find(d => d.id === id);
