@@ -101,6 +101,31 @@
         .match-list-item .game-jornada { font-size: 0.8rem; color: #666; text-align: right; }
         .result-name-container .sub-name { font-size: 0.8rem; font-style: italic; color: #606770; }
         .main-name .sub-name { font-size: 0.9em; font-style: italic; font-weight: 400; color: #606770; margin-left: 8px; }
+
+     .site-footer {
+    background-color: #343a40;
+    color: #f8f9fa;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    flex-shrink: 0;
+    border-top: 1px solid #212529;
+
+    /* ADIÇÕES PARA O EFEITO DE FADE-IN */
+    opacity: 0;                      /* Começa invisível */
+    visibility: hidden;              /* Começa oculto e não interativo */
+    transition: opacity 0.5s ease-in-out; /* Define a animação de fade */
+}
+
+/* --- 2. ADICIONE ESTA NOVA REGRA COMPLETA --- */
+.site-footer.visible {
+    opacity: 1;         /* Fica totalmente visível */
+    visibility: visible;  /* Torna-se visível e interativo */
+}
+
     </style>
 </head>
 <body>
@@ -141,10 +166,21 @@
                         </div>
                     </section>
                 </main>
-            </div>
-        </div>
-    </div>
 
+                <!-- ADIÇÃO: Rodapé com estatísticas -->
+                <footer class="site-footer">
+                    <div class="stat-item">Teams: <span id="stats-teams-count">--</span></div>
+                    <div class="stat-item">Competitions: <span id="stats-competitions-count">--</span></div>
+                    <div class="stat-item">Matches: <span id="stats-matches-count">--</span></div>
+                </footer>
+
+            </div>
+
+
+
+
+
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore, collection, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
@@ -503,6 +539,38 @@
             document.addEventListener('click', (event) => { if (!document.getElementById('global-search-container').contains(event.target)) { panelElement.style.display = 'none'; } });
         }
 
+        async function updateStatsFooter() {
+    const teamsCountEl = document.getElementById('stats-teams-count');
+    const competitionsCountEl = document.getElementById('stats-competitions-count');
+    const matchesCountEl = document.getElementById('stats-matches-count');
+
+    // 1. Contar equipas e competições (usando dados já carregados)
+    teamsCountEl.textContent = clubsMap.size;
+    competitionsCountEl.textContent = competitionsMap.size;
+
+    // 2. Contar jogos finalizados (requer uma nova busca para garantir a contagem total)
+    // Nota: Esta operação busca todos os documentos de jogos para uma contagem precisa.
+    try {
+        const gamesQuery = query(collection(db, 'jogos'));
+        const gamesSnapshot = await getDocs(gamesQuery);
+        let playedGamesCount = 0;
+        
+        gamesSnapshot.forEach(doc => {
+            const result = doc.data().resultadoFinal;
+            // A condição verifica se o resultado não é nulo, vazio, ou 'X'.
+            if (result && result.trim() !== '' && result.toUpperCase() !== 'X') {
+                playedGamesCount++;
+            }
+        });
+        matchesCountEl.textContent = playedGamesCount;
+    } catch (error) {
+        console.error("Error counting matches for stats footer:", error);
+        matchesCountEl.textContent = "Error";
+    }
+}
+
+
+
         async function refreshGameDataAndUpdateUI() {
             try {
                 const now = new Date();
@@ -530,16 +598,25 @@
             }
         }
 
-        async function initializePage() {
-            await Promise.all([ fetchAndStoreClubs(), fetchAndStoreCompetitions(), fetchAndStoreCountries() ]);
-            await fetchAndRenderSidebar();
-            setupSidebarFilter();
-            await refreshGameDataAndUpdateUI(); 
-            setupGlobalSearch();
+    async function initializePage() {
+    await Promise.all([ fetchAndStoreClubs(), fetchAndStoreCompetitions(), fetchAndStoreCountries() ]);
+    await fetchAndRenderSidebar();
+    setupSidebarFilter();
+    await refreshGameDataAndUpdateUI(); 
+    setupGlobalSearch();
+    await updateStatsFooter();
 
-            const refreshInterval = 10 * 60 * 1000;
-            setInterval(refreshGameDataAndUpdateUI, refreshInterval);
+    // ADIÇÃO: Lógica para mostrar o rodapé com atraso
+    setTimeout(() => {
+        const footer = document.querySelector('.site-footer');
+        if (footer) {
+            footer.classList.add('visible');
         }
+    }, 2000); // 2000 milissegundos = 2 segundos
+
+    const refreshInterval = 10 * 60 * 1000;
+    setInterval(refreshGameDataAndUpdateUI, refreshInterval);
+}
 
         initializePage();
     </script>
