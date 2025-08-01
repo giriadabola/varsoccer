@@ -655,29 +655,26 @@
     }
 });
 
-        document.getElementById('formCriarCompeticao').addEventListener('submit', async function(e) { e.preventDefault(); const d = Object.fromEntries(new FormData(this).entries()); if(d.posicaoMenu) d.posicaoMenu = parseInt(d.posicaoMenu); else delete d.posicaoMenu; try { await addDoc(collection(db, "competicoes"), d); alert("Competição criada!"); this.reset(); fetchAllInitialData(); } catch(err){ alert("Erro: "+err.message); }});
-document.getElementById('formCriarPais').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const form = this;
-    const d = Object.fromEntries(new FormData(form).entries());
-    const nomePaisParaVerificar = d.nome.trim().toLowerCase();
+      document.getElementById('formCriarCompeticao').addEventListener('submit', async function(e) {
+    e.preventDefault(); 
+    const d = Object.fromEntries(new FormData(this).entries()); 
     
-    // Verifica se o país já existe no array `allPaises`
-    const existe = allPaises.some(pais => pais.nome.toLowerCase() === nomePaisParaVerificar);
-
-    if (existe) {
-        alert("Este país já existe na base de dados!");
-        return; // Impede o envio do formulário
+    // ESTA É A LÓGICA IMPORTANTE
+    if(d.posicaoMenu) {
+        // Se houver um valor, converte para número
+        d.posicaoMenu = parseInt(d.posicaoMenu); 
+    } else {
+        // Se estiver vazio, remove a propriedade antes de gravar
+        delete d.posicaoMenu; 
     }
 
-    try {
-        await addDoc(collection(db, "paises"), d);
-        alert("País criado!");
-        form.reset();
-        document.getElementById('paisNomeError').textContent = ''; // Limpa a mensagem de erro após sucesso
-        fetchAllInitialData(); // Atualiza a lista de países
-    } catch(err) {
-        alert("Erro: " + err.message);
+    try { 
+        await addDoc(collection(db, "competicoes"), d); 
+        alert("Competição criada!"); 
+        this.reset(); 
+        fetchAllInitialData(); 
+    } catch(err){ 
+        alert("Erro: "+err.message); 
     }
 });
         document.getElementById('formCriarTemporada').addEventListener('submit', async function(e) { e.preventDefault(); try { await addDoc(collection(db, "temporadas"), Object.fromEntries(new FormData(this).entries())); alert("Temporada criada!"); this.reset(); fetchAllInitialData(); } catch(err){ alert("Erro: "+err.message); }});
