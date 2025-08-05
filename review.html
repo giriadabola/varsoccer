@@ -133,8 +133,7 @@
         </div>
     </div>
 
-     <script type="module">
-    // **JS MODIFICADO**: Adicionado "getDoc" ao import
+   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
     import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
@@ -156,7 +155,6 @@
     const searchYouTubeBtn = document.getElementById('searchYouTubeBtn');
     const saveBtn = document.getElementById('saveBtn');
     const videoPreviewElement = document.getElementById('videoPreview');
-    // **JS MODIFICADO**: Referências para as imagens dos logotipos
     const logoCasaImg = document.getElementById('logoCasa');
     const logoForaImg = document.getElementById('logoFora');
 
@@ -168,8 +166,6 @@
     let navigationState = { view: 'competitions', competitionId: null, roundNumber: null };
 
     // --- Funções de Lógica e Renderização ---
-
-    // **NOVA FUNÇÃO**: Busca a URL do logotipo de uma equipa pelo seu ID na coleção 'clubes'.
     const getLogoUrl = async (teamId) => {
         if (!teamId) return null;
         try {
@@ -199,7 +195,6 @@
         }
     };
     
-    // **JS MODIFICADO**: Adicionado o reset dos logotipos
     const resetEditorPanel = () => {
          videoFormFieldset.disabled = true;
          selectedGameNameElement.textContent = 'Selecione um jogo da lista';
@@ -208,7 +203,6 @@
          videoPreviewElement.innerHTML = '';
          selectedGame = null;
          document.querySelectorAll('.nav-list-item.active').forEach(el => el.classList.remove('active'));
-         // Esconde e limpa os logotipos
          logoCasaImg.style.display = 'none';
          logoForaImg.style.display = 'none';
          logoCasaImg.src = '';
@@ -238,7 +232,15 @@
             return;
         }
 
-        competitionsList.innerHTML = competitionsSnapshot.docs.map(doc => {
+        // ***** CORREÇÃO APLICADA AQUI *****
+        // 1. Criar uma cópia mutável do array de documentos
+        const docsArray = [...competitionsSnapshot.docs];
+
+        // 2. Ordenar a cópia alfabeticamente pelo nome da competição
+        docsArray.sort((a, b) => a.data().nome.localeCompare(b.data().nome));
+
+        // 3. Usar o array ordenado (docsArray) para gerar o HTML
+        competitionsList.innerHTML = docsArray.map(doc => {
             const competitionId = doc.id;
             const gamesInComp = allSeasonGamesCache.filter(g => g.competicaoId === competitionId);
             const missingCount = gamesInComp.filter(isVideoMissing).length;
@@ -289,7 +291,6 @@
         }).join('');
     };
     
-    // **JS MODIFICADO**: Função agora é 'async' para esperar pelos logotipos
     const selectGame = async (gameId) => {
         selectedGame = gamesCache.get(gameId);
         if (selectedGame) {
@@ -302,7 +303,6 @@
             useApiYtCheckbox.checked = selectedGame.apiYt === true;
             videoUrlInputElement.dispatchEvent(new Event('input'));
 
-            // **JS MODIFICADO**: Lógica para buscar e exibir os logotipos
             logoCasaImg.style.display = 'none';
             logoForaImg.style.display = 'none';
 
@@ -381,7 +381,6 @@
         if (li) loadGames(li.dataset.round);
     });
 
-    // **JS MODIFICADO**: Event listener agora é 'async' para poder usar 'await' na chamada da função
     gamesList.addEventListener('click', async (e) => {
         const li = e.target.closest('.nav-list-item');
         if (li) await selectGame(li.dataset.id);
