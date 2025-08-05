@@ -245,7 +245,7 @@
         }).join('');
     };
     
-    const selectGame = (gameId) => {
+   const selectGame = (gameId) => {
         selectedGame = filteredGames.find(g => g.id === gameId);
         if (!selectedGame) return;
 
@@ -253,8 +253,14 @@
         document.querySelector(`#gamesList li[data-id="${gameId}"]`).classList.add('active');
 
         editFieldset.disabled = false;
-        resultadoCasaInput.value = selectedGame.resultadoCasa || '0';
-        resultadoForaInput.value = selectedGame.resultadoFora || '0';
+        
+        // ***** LINHAS MODIFICADAS *****
+        // Se o resultado for null ou undefined, o valor será uma string vazia ('').
+        // Se o resultado for 0, ele será exibido corretamente como 0.
+        resultadoCasaInput.value = selectedGame.resultadoCasa ?? '';
+        resultadoForaInput.value = selectedGame.resultadoFora ?? '';
+        // *****************************
+
         videoUrlInput.value = selectedGame.videoUrl || '';
         
         useLinkOnlyCheckbox.checked = !!selectedGame.apiYt;
