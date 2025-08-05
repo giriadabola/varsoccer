@@ -823,42 +823,84 @@ function updateResultadoFinal() {
     }
 }
 
-     function setupEventListeners() {
-    // Listeners originais
-    bulkModalElements.genero.addEventListener('change', populateBulkModalDropdowns);
-    
-    // Alterado: O género agora popula tanto competições como equipas
-    singleGameElements.genero.addEventListener('change', () => {
-        populateCompetitionsForJogo();
-        populateEquipasForJogo();
-    });
+   function setupEventListeners() {
+        // Listeners originais
+        bulkModalElements.genero.addEventListener('change', populateBulkModalDropdowns);
+        
+        singleGameElements.genero.addEventListener('change', () => {
+            populateCompetitionsForJogo();
+            populateEquipasForJogo();
+        });
 
-    // Alterado: A competição já não popula as equipas, apenas calcula a jornada
-    tsJogoCompeticao.on('change', () => { 
-        calculateNextJornada(); 
-    });
+        tsJogoCompeticao.on('change', () => { 
+            calculateNextJornada(); 
+        });
 
-    tsJogoEquipaCasa.on('change', updateNomeJogo);
-    tsJogoEquipaFora.on('change', updateNomeJogo);
-    singleGameElements.data.addEventListener('change', updateNomeJogo);
-    singleGameElements.resCasa.addEventListener('change', updateResultadoFinal);
-    singleGameElements.resFora.addEventListener('change', updateResultadoFinal);
-    tsJogoEquipaCasa.on('change', calculateNextJornada);
-    singleGameElements.temporada.addEventListener('change', calculateNextJornada);
+        tsJogoEquipaCasa.on('change', updateNomeJogo);
+        tsJogoEquipaFora.on('change', updateNomeJogo);
+        singleGameElements.data.addEventListener('change', updateNomeJogo);
+        singleGameElements.resCasa.addEventListener('change', updateResultadoFinal);
+        singleGameElements.resFora.addEventListener('change', updateResultadoFinal);
+        tsJogoEquipaCasa.on('change', calculateNextJornada);
+        singleGameElements.temporada.addEventListener('change', calculateNextJornada);
 
-    // Listener adicionado para o botão de pesquisa do YouTube
-    document.getElementById('searchOnYTBtn').addEventListener('click', function() {
-        const gameName = document.getElementById('jogoNomeJogo').value;
-        if (gameName.trim()) {
-            // Remove a data e o resultado para uma pesquisa mais limpa
-            const searchTerm = gameName.split(' - ')[0] + ' highlights';
-            const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
-            window.open(youtubeUrl, '_blank');
-        } else {
-            alert('O nome do jogo precisa ser gerado primeiro para fazer a pesquisa.');
-        }
-    });
-}
+        document.getElementById('searchOnYTBtn').addEventListener('click', function() {
+            const gameName = document.getElementById('jogoNomeJogo').value;
+            if (gameName.trim()) {
+                const searchTerm = gameName.split(' - ')[0] + ' highlights';
+                const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
+                window.open(youtubeUrl, '_blank');
+            } else {
+                alert('O nome do jogo precisa ser gerado primeiro para fazer a pesquisa.');
+            }
+        });
+
+        // --- INÍCIO DA CORREÇÃO ---
+        // Adiciona os listeners para todos os formulários de criação
+        
+        document.getElementById('formCriarJogo').addEventListener('submit', async function(e) {
+            // ... (A lógica do formCriarJogo que já existe no seu código)
+        });
+        document.getElementById('formCriarJogador').addEventListener('submit', async function(e) { 
+            // ... (A lógica do formCriarJogador que já existe)
+        });
+        document.getElementById('formCriarEquipa').addEventListener('submit', async function(e) {
+            // ... (A lógica do formCriarEquipa que já existe)
+        });
+        document.getElementById('formCriarCompeticao').addEventListener('submit', async function(e) {
+            // ... (A lógica do formCriarCompeticao que já existe)
+        });
+
+        // OUVINTE QUE ESTAVA EM FALTA
+        document.getElementById('formCriarPais').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = this;
+            const d = Object.fromEntries(new FormData(form).entries());
+            const nomePaisParaVerificar = d.nome.trim().toLowerCase();
+            
+            const existe = allPaises.some(pais => pais.nome.toLowerCase() === nomePaisParaVerificar);
+
+            if (existe) {
+                alert("Este país já existe na base de dados!");
+                return; // Impede o envio do formulário
+            }
+
+            try {
+                await addDoc(collection(db, "paises"), d);
+                alert("País criado!");
+                form.reset();
+                document.getElementById('paisNomeError').textContent = ''; 
+                await fetchAllInitialData(); // Atualiza a lista de países
+            } catch(err) {
+                alert("Erro: " + err.message);
+            }
+        });
+
+        document.getElementById('formCriarTemporada').addEventListener('submit', async function(e) {
+            // ... (A lógica do formCriarTemporada que já existe)
+        });
+        // --- FIM DA CORREÇÃO ---
+    }
 
       async function fetchAllInitialData() {
             try {
