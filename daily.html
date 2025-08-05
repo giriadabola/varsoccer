@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogos Diários</title>
+    
+    <style>
+        /* ESTILOS (Idênticos, sem alterações) */
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; color: #333; margin: 0; padding: 20px; font-size: 0.9em; }
+        .container { width: 100%; max-width: 1200px; margin: 0 auto; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; padding: 20px; }
+        h1 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.5em; }
+        .editor-main { display: flex; gap: 20px; min-height: 500px; }
+        .navigation-column { flex: 1; border-right: 1px solid #ddd; padding-right: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .navigation-column select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 1em; }
+        .filter-group { display: flex; gap: 10px; }
+        .filter-group > div { flex: 1; }
+        .nav-header h2 { font-size: 1.1em; margin: 0; color: #555; }
+        .list-container { flex-grow: 1; overflow-y: auto; max-height: 500px; border: 1px solid #eee; border-radius: 4px; padding: 5px; }
+        .nav-list { list-style: none; padding: 0; margin: 0; }
+        .game-list-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; border-radius: 4px; margin-bottom: 4px; border: 1px solid transparent; transition: background-color 0.2s, border-color 0.2s; }
+        .game-list-item:hover { background-color: #f0f2f5; }
+        .game-list-item.active { background-color: #007bff; color: white; font-weight: bold; border-color: #0056b3; }
+        .status-indicator { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .status-green { background-color: #28a745; }
+        .status-red { background-color: #dc3545; }
+        .loading-message, .info-message { color: #888; padding: 10px; }
+        .edit-panel-column { flex: 1.5; }
+        #editForm fieldset { border: 1px solid #ddd; padding: 15px; border-radius: 4px; }
+        #editForm fieldset:disabled { opacity: 0.5; cursor: not-allowed; }
+        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
+        .form-group label { margin-bottom: 4px; font-weight: bold; }
+        .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; }
+        #gameNameDisplay { font-weight: bold; background-color: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 15px; min-height: 20px; word-break: break-word; }
+        .score-inputs { display: flex; gap: 15px; }
+        .score-inputs .form-group { flex: 1; }
+        .button-group { display: flex; gap: 10px; margin-top: 15px; }
+        .action-btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
+        .action-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+        .save-btn { background-color: #28a745; color: white; }
+        .search-btn { background-color: #6c757d; color: white; }
+        #videoPreviewContainer {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            /* **MODIFICADO** A margem inferior foi removida e a superior adicionada */
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            overflow: hidden;
+        }
+        #videoPreviewContainer iframe { width: 100%; height: 100%; border: none; }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
+        .checkbox-group input { width: auto; }
+        .checkbox-group label { margin-bottom: 0; font-weight: normal; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Jogos Diários</h1>
+        <div class="editor-main">
+            <!-- Coluna de Navegação (sem alterações) -->
+            <div class="navigation-column">
+                <div>
+                    <label for="seasonSelector">Temporada</label>
+                    <select id="seasonSelector"><option>A carregar...</option></select>
+                </div>
+                <div class="filter-group">
+                    <div><label for="monthSelector">Mês</label><select id="monthSelector"></select></div>
+                    <div><label for="daySelector">Dia</label><select id="daySelector"></select></div>
+                </div>
+                <div class="nav-header"><h2>Jogos Encontrados</h2></div>
+                <div class="list-container"><ul id="gamesList" class="nav-list"></ul></div>
+            </div>
+            <!-- Painel de Edição -->
+            <div class="edit-panel-column">
+                <h2>Painel de Edição</h2>
+                <form id="editForm">
+                    <fieldset id="editFieldset" disabled>
+                        <div class="form-group">
+                            <label>Jogo Selecionado:</label>
+                            <div id="gameNameDisplay">Selecione um jogo da lista</div>
+                        </div>
+                        <div class="score-inputs">
+                            <div class="form-group">
+                                <label for="resultadoCasaInput">Resultado Casa</label>
+                                <input type="number" id="resultadoCasaInput" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="resultadoForaInput">Resultado Fora</label>
+                                <input type="number" id="resultadoForaInput" min="0" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="videoUrlInput">Link do Vídeo (YouTube, etc.)</label>
+                            <input type="url" id="videoUrlInput" placeholder="https://exemplo.com/video">
+                        </div>
+                        
+                        <!-- ***** ORDEM ALTERADA AQUI ***** -->
+
+                        <!-- 1. Caixa de seleção para incorporar -->
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="useLinkOnlyCheckbox">
+                            <label for="useLinkOnlyCheckbox">Usar apenas link (não incorporar)</label>
+                        </div>
+                        
+                        <!-- 2. Grupo de Botões -->
+                        <div class="button-group">
+                            <button type="button" id="searchYouTubeBtn" class="action-btn search-btn">Procurar</button>
+                            <button type="submit" id="saveBtn" class="action-btn save-btn">Gravar Alterações</button>
+                        </div>
+
+                        <!-- 3. Container para pré-visualização do vídeo (agora no fim) -->
+                        <div id="videoPreviewContainer">Pré-visualização do vídeo</div>
+                        
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    // O CÓDIGO JAVASCRIPT PERMANECE IDÊNTICO AO DA VERSÃO ANTERIOR
+    // Nenhuma alteração é necessária aqui.
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    
+    // --- Config e Elementos DOM ---
+    const firebaseConfig = { apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o", authDomain: "varsoccer-26040.firebaseapp.com", projectId: "varsoccer-26040", storageBucket: "varsoccer-26040.firebasestorage.app", messagingSenderId: "11877829810", appId: "1:11877829810:web:98f9baa131a3b88b6e8dab" };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const seasonSelector = document.getElementById('seasonSelector');
+    const monthSelector = document.getElementById('monthSelector');
+    const daySelector = document.getElementById('daySelector');
+    const gamesList = document.getElementById('gamesList');
+    const editFieldset = document.getElementById('editFieldset');
+    const gameNameDisplay = document.getElementById('gameNameDisplay');
+    const resultadoCasaInput = document.getElementById('resultadoCasaInput');
+    const resultadoForaInput = document.getElementById('resultadoForaInput');
+    const videoUrlInput = document.getElementById('videoUrlInput');
+    const saveBtn = document.getElementById('saveBtn');
+    const editForm = document.getElementById('editForm');
+    const searchYouTubeBtn = document.getElementById('searchYouTubeBtn');
+    const videoPreviewContainer = document.getElementById('videoPreviewContainer');
+    const useLinkOnlyCheckbox = document.getElementById('useLinkOnlyCheckbox');
+
+    // --- Estado da Aplicação ---
+    let allGamesFromDb = [];
+    let filteredGames = [];
+    let selectedGame = null;
+    let hasLoadedInitialData = false;
+    
+    // --- Funções Auxiliares ---
+    const initializeDateSelectors = () => {
+        const today = new Date();
+        const currentMonth = today.getMonth() + 1;
+        const currentDay = today.getDate();
+        const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        monthSelector.innerHTML = monthNames.map((name, index) => `<option value="${index + 1}">${name}</option>`).join('');
+        daySelector.innerHTML = Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+        monthSelector.value = currentMonth;
+        daySelector.value = currentDay;
+    };
+    const loadSeasonsAndSetDefault = async () => {
+        const seasonsQuery = query(collection(db, "temporadas"), orderBy("nome", "desc"));
+        const snapshot = await getDocs(seasonsQuery);
+        const optionsHtml = snapshot.docs.map(doc => `<option value="${doc.data().nome}">${doc.data().nome}</option>`).join('');
+        seasonSelector.innerHTML = '<option value="all">Todas as Temporadas</option>' + optionsHtml;
+        if (!snapshot.empty) {
+            seasonSelector.value = snapshot.docs[0].data().nome;
+        }
+    };
+    const formatGameDate = (dateString) => {
+        if (!dateString || typeof dateString !== 'string') return '';
+        const dateParts = dateString.split('-'); // "AAAA-MM-DD"
+        if (dateParts.length !== 3) return '';
+        return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`; // "DD/MM/AAAA"
+    };
+
+    const clearEditPanel = () => {
+        editFieldset.disabled = true;
+        gameNameDisplay.textContent = 'Selecione um jogo da lista';
+        resultadoCasaInput.value = '';
+        resultadoForaInput.value = '';
+        videoUrlInput.value = '';
+        useLinkOnlyCheckbox.checked = false; // Desmarcar por defeito
+        videoPreviewContainer.innerHTML = 'Pré-visualização do vídeo';
+        selectedGame = null;
+    };
+    
+    // --- Lógica Principal ---
+    const applyFiltersAndRender = async () => {
+        if (!hasLoadedInitialData) {
+            gamesList.innerHTML = '<li class="loading-message">A carregar todos os jogos...</li>';
+            try {
+                const gamesSnapshot = await getDocs(collection(db, "jogos"));
+                allGamesFromDb = gamesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                hasLoadedInitialData = true;
+            } catch (error) {
+                gamesList.innerHTML = `<li class="info-message" style="color: red;">Falha ao carregar dados.</li>`;
+                return;
+            }
+        }
+        
+        const selectedMonth = parseInt(monthSelector.value, 10);
+        const selectedDay = parseInt(daySelector.value, 10);
+        const selectedSeason = seasonSelector.value;
+
+        filteredGames = allGamesFromDb.filter(game => {
+            if (!game.dataJogo || typeof game.dataJogo !== 'string') return false;
+            const dateParts = game.dataJogo.split('-');
+            if (dateParts.length !== 3) return false;
+            const gameMonth = parseInt(dateParts[1], 10);
+            const gameDay = parseInt(dateParts[2], 10);
+            const isDateMatch = gameDay === selectedDay && gameMonth === selectedMonth;
+            const isSeasonMatch = (selectedSeason === 'all' || game.temporada === selectedSeason);
+            return isDateMatch && isSeasonMatch;
+        });
+
+        renderGamesList();
+    };
+
+    const renderGamesList = () => {
+        clearEditPanel(); 
+        
+        if (filteredGames.length === 0) {
+            gamesList.innerHTML = '<li class="info-message">Nenhum jogo encontrado.</li>';
+            return;
+        }
+
+        gamesList.innerHTML = filteredGames.map(game => {
+            const hasVideo = game.videoUrl && game.videoUrl.trim() !== '';
+            const statusClass = hasVideo ? 'status-green' : 'status-red';
+            return `
+                <li class="game-list-item" data-id="${game.id}">
+                    <span class="status-indicator ${statusClass}"></span>
+                    <span>${game.nomeJogo || 'Jogo sem nome'}</span>
+                </li>
+            `;
+        }).join('');
+    };
+    
+    const selectGame = (gameId) => {
+        selectedGame = filteredGames.find(g => g.id === gameId);
+        if (!selectedGame) return;
+
+        document.querySelectorAll('#gamesList .active').forEach(el => el.classList.remove('active'));
+        document.querySelector(`#gamesList li[data-id="${gameId}"]`).classList.add('active');
+
+        editFieldset.disabled = false;
+        resultadoCasaInput.value = selectedGame.resultadoCasa || '0';
+        resultadoForaInput.value = selectedGame.resultadoFora || '0';
+        videoUrlInput.value = selectedGame.videoUrl || '';
+        
+        useLinkOnlyCheckbox.checked = !!selectedGame.apiYt;
+
+        renderVideoPreview(videoUrlInput.value);
+        updateGeneratedFields();
+    };
+    
+    // --- Lógica de Automação ---
+    const updateGeneratedFields = () => {
+        if (!selectedGame) return;
+        const casa = resultadoCasaInput.value;
+        const fora = resultadoForaInput.value;
+        const dataFormatada = formatGameDate(selectedGame.dataJogo);
+        gameNameDisplay.textContent = `${selectedGame.equipaCasaNome} ${casa}-${fora} ${selectedGame.equipaForaNome} - ${dataFormatada}`;
+    };
+
+    const renderVideoPreview = (url) => {
+        if (!url || !url.trim()) {
+            videoPreviewContainer.innerHTML = 'Pré-visualização do vídeo';
+            return;
+        }
+        let videoId = null;
+        const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+        const match = url.match(youtubeRegex);
+        if (match && match[1]) {
+            videoId = match[1];
+        }
+
+        if (videoId) {
+            videoPreviewContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        } else {
+            videoPreviewContainer.innerHTML = 'Link não suportado ou inválido para pré-visualização.';
+        }
+    };
+
+    // --- Gravação e Pesquisa ---
+    editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!selectedGame || saveBtn.disabled) return;
+
+        const originalBtnText = saveBtn.textContent;
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'A gravar...';
+        
+        const dataFormatada = formatGameDate(selectedGame.dataJogo);
+        const casa = resultadoCasaInput.value;
+        const fora = resultadoForaInput.value;
+
+        const updatedData = {
+            resultadoCasa: casa,
+            resultadoFora: fora,
+            videoUrl: videoUrlInput.value.trim(),
+            resultadoFinal: `${casa}-${fora}`,
+            nomeJogo: `${selectedGame.equipaCasaNome} ${casa}-${fora} ${selectedGame.equipaForaNome} - ${dataFormatada}`,
+            apiYt: useLinkOnlyCheckbox.checked
+        };
+
+        try {
+            await updateDoc(doc(db, 'jogos', selectedGame.id), updatedData);
+            
+            const gameIndexInDb = allGamesFromDb.findIndex(g => g.id === selectedGame.id);
+            if (gameIndexInDb > -1) allGamesFromDb[gameIndexInDb] = { ...allGamesFromDb[gameIndexInDb], ...updatedData };
+            
+            const gameIndexInFiltered = filteredGames.findIndex(g => g.id === selectedGame.id);
+            if (gameIndexInFiltered > -1) filteredGames[gameIndexInFiltered] = { ...filteredGames[gameIndexInFiltered], ...updatedData };
+
+            selectedGame = { ...selectedGame, ...updatedData };
+            
+            const listItem = document.querySelector(`#gamesList li[data-id="${selectedGame.id}"]`);
+            if(listItem) {
+                const hasVideo = updatedData.videoUrl && updatedData.videoUrl.trim() !== '';
+                const statusIndicator = listItem.querySelector('.status-indicator');
+                statusIndicator.className = `status-indicator ${hasVideo ? 'status-green' : 'status-red'}`;
+                listItem.querySelector('span:last-child').textContent = updatedData.nomeJogo;
+            }
+            
+            saveBtn.textContent = 'Gravado!';
+            saveBtn.style.backgroundColor = '#218838';
+
+        } catch (error) {
+            console.error("Erro ao gravar alterações: ", error);
+            alert("Ocorreu um erro ao gravar. Tente novamente.");
+            saveBtn.textContent = originalBtnText;
+        } finally {
+            setTimeout(() => {
+                saveBtn.textContent = originalBtnText;
+                saveBtn.style.backgroundColor = '#28a745';
+                saveBtn.disabled = false;
+            }, 2000);
+        }
+    });
+    
+    searchYouTubeBtn.addEventListener('click', () => {
+        if (!selectedGame) return;
+        const gameNameWithDate = gameNameDisplay.textContent;
+        const searchTerm = `${gameNameWithDate} highlights`;
+        const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
+        window.open(youtubeUrl, '_blank');
+    });
+
+    // --- Event Listeners ---
+    seasonSelector.addEventListener('change', applyFiltersAndRender);
+    monthSelector.addEventListener('change', applyFiltersAndRender);
+    daySelector.addEventListener('change', applyFiltersAndRender);
+    
+    gamesList.addEventListener('click', (e) => {
+        const li = e.target.closest('.game-list-item');
+        if (li) selectGame(li.dataset.id);
+    });
+
+    resultadoCasaInput.addEventListener('input', updateGeneratedFields);
+    resultadoForaInput.addEventListener('input', updateGeneratedFields);
+
+    videoUrlInput.addEventListener('input', (e) => {
+        renderVideoPreview(e.target.value);
+    });
+
+    // --- Inicialização ---
+    document.addEventListener('DOMContentLoaded', async () => {
+        initializeDateSelectors();
+        await loadSeasonsAndSetDefault();
+        await applyFiltersAndRender();
+    });
+
+</script>
+</body>
+</html>
