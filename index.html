@@ -584,7 +584,7 @@
             teams.forEach(team => { loadAndRenderPickcards(team.id, 'team'); });
         }
         
-        function setupGlobalSearch() {
+       function setupGlobalSearch() {
             const inputElement = document.getElementById('global-search-input');
             const panelElement = document.getElementById('search-results-panel');
             let debounceTimer;
@@ -593,7 +593,11 @@
                 const searchTerm = event.target.value.toLowerCase();
                 if (searchTerm.length < 2) { panelElement.style.display = 'none'; return; }
                 debounceTimer = setTimeout(() => {
-                    const filteredTeams = Array.from(clubsMap.values()).filter(team => team.nome.toLowerCase().includes(searchTerm));
+                    // --- LINHA MODIFICADA ---
+                    const filteredTeams = Array.from(clubsMap.values()).filter(team => 
+                        team.nome.toLowerCase().includes(searchTerm) || 
+                        (team.alcunha && team.alcunha.toLowerCase().includes(searchTerm))
+                    );
                     const filteredCompetitions = Array.from(competitionsMap.values()).filter(comp => comp.nome.toLowerCase().includes(searchTerm) || (comp.namming && comp.namming.toLowerCase().includes(searchTerm)));
                     renderSearchResults(filteredTeams, filteredCompetitions);
                 }, 300);
