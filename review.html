@@ -37,6 +37,30 @@
 
         /* PAINEL DE EDIÇÃO (Direita) */
         .edit-panel-column { flex: 1.5; }
+        
+        /* **NOVO** Estilos para o cabeçalho do painel com logotipos */
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px; /* Mantém o espaçamento que o h2 tinha */
+        }
+        .panel-header h2 {
+            margin: 0; /* Remove margem padrão do h2 */
+            flex-shrink: 0; /* Impede que o texto encolha */
+        }
+        .logo-container {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .logo-container img {
+            height: 32px; /* Altura controlada para os logotipos */
+            width: auto;
+            object-fit: contain;
+            display: none; /* Escondido por defeito, JS irá mostrar */
+        }
+
         #videoForm fieldset { border: 1px solid #ddd; padding: 15px; border-radius: 4px; }
         #videoForm fieldset:disabled { opacity: 0.5; cursor: not-allowed; }
         #selectedGameName { font-weight: bold; background-color: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 15px; min-height: 20px; }
@@ -76,7 +100,14 @@
             </div>
 
             <div class="edit-panel-column">
-                 <h2>Painel de Edição</h2>
+                 <!-- **HTML MODIFICADO**: O h2 foi envolvido para permitir o alinhamento com os logotipos -->
+                <div class="panel-header">
+                    <h2>Painel de Edição</h2>
+                    <div class="logo-container">
+                        <img id="logoCasa" src="" alt="Logo Equipa Casa">
+                        <img id="logoFora" src="" alt="Logo Equipa Visitante">
+                    </div>
+                </div>
                 <form id="videoForm">
                     <fieldset id="videoFormFieldset" disabled>
                         <div class="form-group">
@@ -103,8 +134,9 @@
     </div>
 
      <script type="module">
+    // **JS MODIFICADO**: Adicionado "getDoc" ao import
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
     const firebaseConfig = { apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o", authDomain: "varsoccer-26040.firebaseapp.com", projectId: "varsoccer-26040", storageBucket: "varsoccer-26040.firebasestorage.app", messagingSenderId: "11877829810", appId: "1:11877829810:web:98f9baa131a3b88b6e8dab" };
     const app = initializeApp(firebaseConfig);
@@ -124,6 +156,9 @@
     const searchYouTubeBtn = document.getElementById('searchYouTubeBtn');
     const saveBtn = document.getElementById('saveBtn');
     const videoPreviewElement = document.getElementById('videoPreview');
+    // **JS MODIFICADO**: Referências para as imagens dos logotipos
+    const logoCasaImg = document.getElementById('logoCasa');
+    const logoForaImg = document.getElementById('logoFora');
 
     // --- Estado da Aplicação ---
     let gamesCache = new Map();
@@ -133,6 +168,23 @@
     let navigationState = { view: 'competitions', competitionId: null, roundNumber: null };
 
     // --- Funções de Lógica e Renderização ---
+
+    // **NOVA FUNÇÃO**: Busca a URL do logotipo de uma equipa pelo seu ID na coleção 'clubes'.
+    const getLogoUrl = async (teamId) => {
+        if (!teamId) return null;
+        try {
+            const teamRef = doc(db, 'clubes', teamId);
+            const teamSnap = await getDoc(teamRef);
+            if (teamSnap.exists() && teamSnap.data().logoUrl) {
+                return teamSnap.data().logoUrl;
+            }
+            return null;
+        } catch (error) {
+            console.error(`Erro ao buscar logo para equipa ${teamId}:`, error);
+            return null;
+        }
+    };
+    
     const isVideoMissing = (game) => !game.videoUrl || game.videoUrl.trim() === '';
 
     const updateView = (view, title) => {
@@ -147,6 +199,7 @@
         }
     };
     
+    // **JS MODIFICADO**: Adicionado o reset dos logotipos
     const resetEditorPanel = () => {
          videoFormFieldset.disabled = true;
          selectedGameNameElement.textContent = 'Selecione um jogo da lista';
@@ -155,6 +208,11 @@
          videoPreviewElement.innerHTML = '';
          selectedGame = null;
          document.querySelectorAll('.nav-list-item.active').forEach(el => el.classList.remove('active'));
+         // Esconde e limpa os logotipos
+         logoCasaImg.style.display = 'none';
+         logoForaImg.style.display = 'none';
+         logoCasaImg.src = '';
+         logoForaImg.src = '';
     };
 
     const loadSeasons = async () => {
@@ -231,16 +289,36 @@
         }).join('');
     };
     
-    const selectGame = (gameId) => {
+    // **JS MODIFICADO**: Função agora é 'async' para esperar pelos logotipos
+    const selectGame = async (gameId) => {
         selectedGame = gamesCache.get(gameId);
         if (selectedGame) {
             document.querySelectorAll('#gamesList .active').forEach(el => el.classList.remove('active'));
             document.querySelector(`#gamesList li[data-id="${gameId}"]`).classList.add('active');
+            
             videoFormFieldset.disabled = false;
             selectedGameNameElement.textContent = selectedGame.nomeJogo;
             videoUrlInputElement.value = selectedGame.videoUrl || '';
             useApiYtCheckbox.checked = selectedGame.apiYt === true;
             videoUrlInputElement.dispatchEvent(new Event('input'));
+
+            // **JS MODIFICADO**: Lógica para buscar e exibir os logotipos
+            logoCasaImg.style.display = 'none';
+            logoForaImg.style.display = 'none';
+
+            const [logoCasaUrl, logoForaUrl] = await Promise.all([
+                getLogoUrl(selectedGame.equipaCasaId),
+                getLogoUrl(selectedGame.equipaForaId)
+            ]);
+
+            if (logoCasaUrl) {
+                logoCasaImg.src = logoCasaUrl;
+                logoCasaImg.style.display = 'block';
+            }
+            if (logoForaUrl) {
+                logoForaImg.src = logoForaUrl;
+                logoForaImg.style.display = 'block';
+            }
         }
     };
 
@@ -303,9 +381,10 @@
         if (li) loadGames(li.dataset.round);
     });
 
-    gamesList.addEventListener('click', (e) => {
+    // **JS MODIFICADO**: Event listener agora é 'async' para poder usar 'await' na chamada da função
+    gamesList.addEventListener('click', async (e) => {
         const li = e.target.closest('.nav-list-item');
-        if (li) selectGame(li.dataset.id);
+        if (li) await selectGame(li.dataset.id);
     });
     
     videoUrlInputElement.addEventListener('input', () => {
@@ -325,7 +404,6 @@
         window.open(`https://www.youtube.com/results?search_query=${searchTerm}`, '_blank');
     });
 
-    // ##### FUNÇÃO DE GRAVAÇÃO CORRIGIDA E FINAL #####
     videoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedGame || saveBtn.disabled) return;
@@ -349,7 +427,6 @@
             saveBtn.textContent = 'Gravado!';
             saveBtn.style.backgroundColor = '#218838';
 
-            // Atualiza o item na lista de jogos visível
             const gameListItem = gamesList.querySelector(`li[data-id="${selectedGame.id}"]`);
             if (gameListItem) {
                 const iconEl = gameListItem.querySelector('.nav-icon');
@@ -358,7 +435,6 @@
                 iconEl.textContent = hasVideo ? (useApi ? '🔗' : '🎬') : '❌';
             }
             
-            // Atualiza os crachás nas listas ocultas sem mudar de ecrã
             updateRoundBadge(navigationState.roundNumber);
             updateCompetitionBadge(navigationState.competitionId);
 
