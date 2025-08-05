@@ -150,22 +150,77 @@
     const useLinkOnlyCheckbox = document.getElementById('useLinkOnlyCheckbox');
 
     // --- Estado da Aplicação ---
-    let allGamesFromDb = [];
+    let allGamesFromDb = []; // ALTERADO: Agora é a fonte central de dados
     let filteredGames = [];
     let selectedGame = null;
-    let hasLoadedInitialData = false;
     
     // --- Funções Auxiliares ---
-    const initializeDateSelectors = () => {
+    
+    // NOVO: Função dedicada para carregar todos os jogos no início.
+    const loadAllGames = async () => {
+        gamesList.innerHTML = '<li class="loading-message">A carregar todos os jogos...</li>';
+        try {
+            const gamesSnapshot = await getDocs(collection(db, "jogos"));
+            allGamesFromDb = gamesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            gamesList.innerHTML = `<li class="info-message" style="color: red;">Falha ao carregar dados.</li>`;
+            throw error; // Propaga o erro para parar a inicialização
+        }
+    };
+
+    // ALTERADO: Função para inicializar apenas o seletor de mês.
+    const initializeMonthSelector = () => {
         const today = new Date();
         const currentMonth = today.getMonth() + 1;
-        const currentDay = today.getDate();
         const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         monthSelector.innerHTML = monthNames.map((name, index) => `<option value="${index + 1}">${name}</option>`).join('');
-        daySelector.innerHTML = Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
         monthSelector.value = currentMonth;
+    };
+    
+    // NOVO: O coração da nova lógica para popular o seletor de dia com contadores.
+    const updateDaySelectorWithCounts = () => {
+        const selectedMonth = parseInt(monthSelector.value, 10);
+        const selectedSeason = seasonSelector.value;
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // Garante que o dia de hoje seja incluído na totalidade
+
+        const pendingCounts = {}; // Ex: { 1: 5, 2: 3, 15: 11 }
+
+        allGamesFromDb.forEach(game => {
+            if (!game.dataJogo || typeof game.dataJogo !== 'string') return;
+            
+            const dateParts = game.dataJogo.split('-');
+            if (dateParts.length !== 3) return;
+
+            const gameDate = new Date(game.dataJogo);
+            const gameMonth = parseInt(dateParts[1], 10);
+            const gameDay = parseInt(dateParts[2], 10);
+
+            const isSeasonMatch = (selectedSeason === 'all' || game.temporada === selectedSeason);
+            const isMonthMatch = gameMonth === selectedMonth;
+            
+            // Condições para ser um jogo pendente:
+            const hasNoVideo = !game.videoUrl || game.videoUrl.trim() === '';
+            const isNotInFuture = gameDate <= today;
+
+            if (isSeasonMatch && isMonthMatch && hasNoVideo && isNotInFuture) {
+                pendingCounts[gameDay] = (pendingCounts[gameDay] || 0) + 1;
+            }
+        });
+
+        const currentDay = daySelector.value || new Date().getDate();
+        let optionsHtml = '';
+        for (let i = 1; i <= 31; i++) {
+            const count = pendingCounts[i] || 0;
+            // Adiciona o contador com o emoji 🔴 se houver jogos pendentes
+            const displayCounter = count > 0 ? `  🔴 ${count}` : '';
+            optionsHtml += `<option value="${i}">Dia ${i}${displayCounter}</option>`;
+        }
+        daySelector.innerHTML = optionsHtml;
         daySelector.value = currentDay;
     };
+
+
     const loadSeasonsAndSetDefault = async () => {
         const seasonsQuery = query(collection(db, "temporadas"), orderBy("nome", "desc"));
         const snapshot = await getDocs(seasonsQuery);
@@ -177,36 +232,24 @@
     };
     const formatGameDate = (dateString) => {
         if (!dateString || typeof dateString !== 'string') return '';
-        const dateParts = dateString.split('-'); // "AAAA-MM-DD"
+        const dateParts = dateString.split('-'); 
         if (dateParts.length !== 3) return '';
-        return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`; // "DD/MM/AAAA"
+        return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`; 
     };
 
     const clearEditPanel = () => {
         editFieldset.disabled = true;
         gameNameDisplay.textContent = 'Selecione um jogo da lista';
-        resultadoCasaInput.value = '';
-        resultadoForaInput.value = '';
+        resultadoCasaInput.value = ''; // Alterado para vazio por defeito
+        resultadoForaInput.value = ''; // Alterado para vazio por defeito
         videoUrlInput.value = '';
-        useLinkOnlyCheckbox.checked = false; // Desmarcar por defeito
+        useLinkOnlyCheckbox.checked = false;
         videoPreviewContainer.innerHTML = 'Pré-visualização do vídeo';
         selectedGame = null;
     };
     
     // --- Lógica Principal ---
-    const applyFiltersAndRender = async () => {
-        if (!hasLoadedInitialData) {
-            gamesList.innerHTML = '<li class="loading-message">A carregar todos os jogos...</li>';
-            try {
-                const gamesSnapshot = await getDocs(collection(db, "jogos"));
-                allGamesFromDb = gamesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                hasLoadedInitialData = true;
-            } catch (error) {
-                gamesList.innerHTML = `<li class="info-message" style="color: red;">Falha ao carregar dados.</li>`;
-                return;
-            }
-        }
-        
+    const applyFiltersAndRender = () => { // ALTERADO: Não carrega mais dados, apenas filtra.
         const selectedMonth = parseInt(monthSelector.value, 10);
         const selectedDay = parseInt(daySelector.value, 10);
         const selectedSeason = seasonSelector.value;
@@ -245,7 +288,7 @@
         }).join('');
     };
     
-   const selectGame = (gameId) => {
+    const selectGame = (gameId) => {
         selectedGame = filteredGames.find(g => g.id === gameId);
         if (!selectedGame) return;
 
@@ -253,14 +296,8 @@
         document.querySelector(`#gamesList li[data-id="${gameId}"]`).classList.add('active');
 
         editFieldset.disabled = false;
-        
-        // ***** LINHAS MODIFICADAS *****
-        // Se o resultado for null ou undefined, o valor será uma string vazia ('').
-        // Se o resultado for 0, ele será exibido corretamente como 0.
         resultadoCasaInput.value = selectedGame.resultadoCasa ?? '';
         resultadoForaInput.value = selectedGame.resultadoFora ?? '';
-        // *****************************
-
         videoUrlInput.value = selectedGame.videoUrl || '';
         
         useLinkOnlyCheckbox.checked = !!selectedGame.apiYt;
@@ -269,7 +306,6 @@
         updateGeneratedFields();
     };
     
-    // --- Lógica de Automação ---
     const updateGeneratedFields = () => {
         if (!selectedGame) return;
         const casa = resultadoCasaInput.value;
@@ -297,7 +333,6 @@
         }
     };
 
-    // --- Gravação e Pesquisa ---
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedGame || saveBtn.disabled) return;
@@ -341,6 +376,9 @@
             saveBtn.textContent = 'Gravado!';
             saveBtn.style.backgroundColor = '#218838';
 
+            // NOVO: Atualiza o contador de dias após gravar uma alteração
+            updateDaySelectorWithCounts();
+
         } catch (error) {
             console.error("Erro ao gravar alterações: ", error);
             alert("Ocorreu um erro ao gravar. Tente novamente.");
@@ -363,8 +401,16 @@
     });
 
     // --- Event Listeners ---
-    seasonSelector.addEventListener('change', applyFiltersAndRender);
-    monthSelector.addEventListener('change', applyFiltersAndRender);
+    
+    // ALTERADO: Os listeners de mês e temporada agora atualizam os contadores de dia.
+    seasonSelector.addEventListener('change', () => {
+        updateDaySelectorWithCounts();
+        applyFiltersAndRender();
+    });
+    monthSelector.addEventListener('change', () => {
+        updateDaySelectorWithCounts();
+        applyFiltersAndRender();
+    });
     daySelector.addEventListener('change', applyFiltersAndRender);
     
     gamesList.addEventListener('click', (e) => {
@@ -380,10 +426,17 @@
     });
 
     // --- Inicialização ---
+    // ALTERADO: A ordem de inicialização mudou para carregar dados primeiro.
     document.addEventListener('DOMContentLoaded', async () => {
-        initializeDateSelectors();
-        await loadSeasonsAndSetDefault();
-        await applyFiltersAndRender();
+        try {
+            await loadAllGames();
+            initializeMonthSelector();
+            await loadSeasonsAndSetDefault();
+            updateDaySelectorWithCounts(); // Primeira chamada para preencher os dias
+            applyFiltersAndRender(); // Renderiza a lista inicial
+        } catch (error) {
+            console.error("Falha na inicialização da aplicação:", error);
+        }
     });
 
 </script>
