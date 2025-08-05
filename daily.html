@@ -6,7 +6,7 @@
     <title>Jogos Diários</title>
     
     <style>
-        /* ESTILOS (Idênticos, sem alterações) */
+        /* ESTILOS (Com adições) */
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; color: #333; margin: 0; padding: 20px; font-size: 0.9em; }
         .container { width: 100%; max-width: 1200px; margin: 0 auto; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; padding: 20px; }
         h1 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.5em; }
@@ -26,6 +26,30 @@
         .status-red { background-color: #dc3545; }
         .loading-message, .info-message { color: #888; padding: 10px; }
         .edit-panel-column { flex: 1.5; }
+
+        /* **NOVO** Estilos para o cabeçalho do painel com logotipos */
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px; /* Mantém o espaçamento que o h2 tinha */
+        }
+        .panel-header h2 {
+            margin: 0; /* Remove margem padrão do h2 */
+            flex-shrink: 0; /* Impede que o texto encolha */
+        }
+        .logo-container {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .logo-container img {
+            height: 32px; /* Altura controlada para os logotipos */
+            width: auto;
+            object-fit: contain;
+            display: none; /* Escondido por defeito, JS irá mostrar */
+        }
+        
         #editForm fieldset { border: 1px solid #ddd; padding: 15px; border-radius: 4px; }
         #editForm fieldset:disabled { opacity: 0.5; cursor: not-allowed; }
         .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
@@ -39,19 +63,7 @@
         .action-btn:disabled { cursor: not-allowed; opacity: 0.7; }
         .save-btn { background-color: #28a745; color: white; }
         .search-btn { background-color: #6c757d; color: white; }
-        #videoPreviewContainer {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            background-color: #e9ecef;
-            border-radius: 4px;
-            /* **MODIFICADO** A margem inferior foi removida e a superior adicionada */
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #888;
-            overflow: hidden;
-        }
+        #videoPreviewContainer { width: 100%; aspect-ratio: 16 / 9; background-color: #e9ecef; border-radius: 4px; margin-top: 15px; display: flex; align-items: center; justify-content: center; color: #888; overflow: hidden; }
         #videoPreviewContainer iframe { width: 100%; height: 100%; border: none; }
         .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
         .checkbox-group input { width: auto; }
@@ -77,7 +89,14 @@
             </div>
             <!-- Painel de Edição -->
             <div class="edit-panel-column">
-                <h2>Painel de Edição</h2>
+                <!-- **HTML MODIFICADO**: O h2 foi envolvido para permitir o alinhamento com os logotipos -->
+                <div class="panel-header">
+                    <h2>Painel de Edição</h2>
+                    <div class="logo-container">
+                        <img id="logoCasa" src="" alt="Logo Equipa Casa">
+                        <img id="logoFora" src="" alt="Logo Equipa Visitante">
+                    </div>
+                </div>
                 <form id="editForm">
                     <fieldset id="editFieldset" disabled>
                         <div class="form-group">
@@ -98,24 +117,15 @@
                             <label for="videoUrlInput">Link do Vídeo (YouTube, etc.)</label>
                             <input type="url" id="videoUrlInput" placeholder="https://exemplo.com/video">
                         </div>
-                        
-                        <!-- ***** ORDEM ALTERADA AQUI ***** -->
-
-                        <!-- 1. Caixa de seleção para incorporar -->
                         <div class="checkbox-group">
                             <input type="checkbox" id="useLinkOnlyCheckbox">
                             <label for="useLinkOnlyCheckbox">Usar apenas link (não incorporar)</label>
                         </div>
-                        
-                        <!-- 2. Grupo de Botões -->
                         <div class="button-group">
                             <button type="button" id="searchYouTubeBtn" class="action-btn search-btn">Procurar</button>
                             <button type="submit" id="saveBtn" class="action-btn save-btn">Gravar Alterações</button>
                         </div>
-
-                        <!-- 3. Container para pré-visualização do vídeo (agora no fim) -->
                         <div id="videoPreviewContainer">Pré-visualização do vídeo</div>
-                        
                     </fieldset>
                 </form>
             </div>
@@ -123,11 +133,9 @@
     </div>
 
 <script type="module">
-    // O CÓDIGO JAVASCRIPT PERMANECE IDÊNTICO AO DA VERSÃO ANTERIOR
-    // Nenhuma alteração é necessária aqui.
-
+    // **JS MODIFICADO**: Adicionado "getDoc" ao import
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
     
     // --- Config e Elementos DOM ---
     const firebaseConfig = { apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o", authDomain: "varsoccer-26040.firebaseapp.com", projectId: "varsoccer-26040", storageBucket: "varsoccer-26040.firebasestorage.app", messagingSenderId: "11877829810", appId: "1:11877829810:web:98f9baa131a3b88b6e8dab" };
@@ -148,15 +156,34 @@
     const searchYouTubeBtn = document.getElementById('searchYouTubeBtn');
     const videoPreviewContainer = document.getElementById('videoPreviewContainer');
     const useLinkOnlyCheckbox = document.getElementById('useLinkOnlyCheckbox');
+    const logoCasaImg = document.getElementById('logoCasa');
+    const logoForaImg = document.getElementById('logoFora');
 
     // --- Estado da Aplicação ---
-    let allGamesFromDb = []; // ALTERADO: Agora é a fonte central de dados
+    let allGamesFromDb = []; 
     let filteredGames = [];
     let selectedGame = null;
     
     // --- Funções Auxiliares ---
     
-    // NOVO: Função dedicada para carregar todos os jogos no início.
+    const getLogoUrl = async (teamId) => {
+        if (!teamId) return null;
+        try {
+            // ***** ALTERAÇÃO PRINCIPAL AQUI *****
+            // O nome da coleção foi corrigido de 'equipas' para 'clubes'.
+            const teamRef = doc(db, 'clubes', teamId);
+            const teamSnap = await getDoc(teamRef);
+            if (teamSnap.exists() && teamSnap.data().logoUrl) {
+                return teamSnap.data().logoUrl;
+            }
+            console.log(`Logo não encontrado para a equipa ${teamId} na coleção 'clubes'.`);
+            return null;
+        } catch (error) {
+            console.error(`Erro ao buscar logo para equipa ${teamId}:`, error);
+            return null;
+        }
+    };
+
     const loadAllGames = async () => {
         gamesList.innerHTML = '<li class="loading-message">A carregar todos os jogos...</li>';
         try {
@@ -164,11 +191,10 @@
             allGamesFromDb = gamesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             gamesList.innerHTML = `<li class="info-message" style="color: red;">Falha ao carregar dados.</li>`;
-            throw error; // Propaga o erro para parar a inicialização
+            throw error;
         }
     };
 
-    // ALTERADO: Função para inicializar apenas o seletor de mês.
     const initializeMonthSelector = () => {
         const today = new Date();
         const currentMonth = today.getMonth() + 1;
@@ -177,49 +203,37 @@
         monthSelector.value = currentMonth;
     };
     
-    // NOVO: O coração da nova lógica para popular o seletor de dia com contadores.
     const updateDaySelectorWithCounts = () => {
         const selectedMonth = parseInt(monthSelector.value, 10);
         const selectedSeason = seasonSelector.value;
         const today = new Date();
-        today.setHours(23, 59, 59, 999); // Garante que o dia de hoje seja incluído na totalidade
-
-        const pendingCounts = {}; // Ex: { 1: 5, 2: 3, 15: 11 }
-
+        today.setHours(23, 59, 59, 999);
+        const pendingCounts = {};
         allGamesFromDb.forEach(game => {
             if (!game.dataJogo || typeof game.dataJogo !== 'string') return;
-            
             const dateParts = game.dataJogo.split('-');
             if (dateParts.length !== 3) return;
-
             const gameDate = new Date(game.dataJogo);
             const gameMonth = parseInt(dateParts[1], 10);
             const gameDay = parseInt(dateParts[2], 10);
-
             const isSeasonMatch = (selectedSeason === 'all' || game.temporada === selectedSeason);
             const isMonthMatch = gameMonth === selectedMonth;
-            
-            // Condições para ser um jogo pendente:
             const hasNoVideo = !game.videoUrl || game.videoUrl.trim() === '';
             const isNotInFuture = gameDate <= today;
-
             if (isSeasonMatch && isMonthMatch && hasNoVideo && isNotInFuture) {
                 pendingCounts[gameDay] = (pendingCounts[gameDay] || 0) + 1;
             }
         });
-
         const currentDay = daySelector.value || new Date().getDate();
         let optionsHtml = '';
         for (let i = 1; i <= 31; i++) {
             const count = pendingCounts[i] || 0;
-            // Adiciona o contador com o emoji 🔴 se houver jogos pendentes
             const displayCounter = count > 0 ? `  🔴 ${count}` : '';
             optionsHtml += `<option value="${i}">Dia ${i}${displayCounter}</option>`;
         }
         daySelector.innerHTML = optionsHtml;
         daySelector.value = currentDay;
     };
-
 
     const loadSeasonsAndSetDefault = async () => {
         const seasonsQuery = query(collection(db, "temporadas"), orderBy("nome", "desc"));
@@ -240,20 +254,23 @@
     const clearEditPanel = () => {
         editFieldset.disabled = true;
         gameNameDisplay.textContent = 'Selecione um jogo da lista';
-        resultadoCasaInput.value = ''; // Alterado para vazio por defeito
-        resultadoForaInput.value = ''; // Alterado para vazio por defeito
+        resultadoCasaInput.value = '';
+        resultadoForaInput.value = '';
         videoUrlInput.value = '';
         useLinkOnlyCheckbox.checked = false;
         videoPreviewContainer.innerHTML = 'Pré-visualização do vídeo';
         selectedGame = null;
+        logoCasaImg.style.display = 'none';
+        logoForaImg.style.display = 'none';
+        logoCasaImg.src = '';
+        logoForaImg.src = '';
     };
     
     // --- Lógica Principal ---
-    const applyFiltersAndRender = () => { // ALTERADO: Não carrega mais dados, apenas filtra.
+    const applyFiltersAndRender = () => { 
         const selectedMonth = parseInt(monthSelector.value, 10);
         const selectedDay = parseInt(daySelector.value, 10);
         const selectedSeason = seasonSelector.value;
-
         filteredGames = allGamesFromDb.filter(game => {
             if (!game.dataJogo || typeof game.dataJogo !== 'string') return false;
             const dateParts = game.dataJogo.split('-');
@@ -264,18 +281,15 @@
             const isSeasonMatch = (selectedSeason === 'all' || game.temporada === selectedSeason);
             return isDateMatch && isSeasonMatch;
         });
-
         renderGamesList();
     };
 
     const renderGamesList = () => {
         clearEditPanel(); 
-        
         if (filteredGames.length === 0) {
             gamesList.innerHTML = '<li class="info-message">Nenhum jogo encontrado.</li>';
             return;
         }
-
         gamesList.innerHTML = filteredGames.map(game => {
             const hasVideo = game.videoUrl && game.videoUrl.trim() !== '';
             const statusClass = hasVideo ? 'status-green' : 'status-red';
@@ -288,22 +302,32 @@
         }).join('');
     };
     
-    const selectGame = (gameId) => {
+    const selectGame = async (gameId) => {
         selectedGame = filteredGames.find(g => g.id === gameId);
         if (!selectedGame) return;
-
         document.querySelectorAll('#gamesList .active').forEach(el => el.classList.remove('active'));
         document.querySelector(`#gamesList li[data-id="${gameId}"]`).classList.add('active');
-
         editFieldset.disabled = false;
         resultadoCasaInput.value = selectedGame.resultadoCasa ?? '';
         resultadoForaInput.value = selectedGame.resultadoFora ?? '';
         videoUrlInput.value = selectedGame.videoUrl || '';
-        
         useLinkOnlyCheckbox.checked = !!selectedGame.apiYt;
-
         renderVideoPreview(videoUrlInput.value);
         updateGeneratedFields();
+        logoCasaImg.style.display = 'none';
+        logoForaImg.style.display = 'none';
+        const [logoCasaUrl, logoForaUrl] = await Promise.all([
+            getLogoUrl(selectedGame.equipaCasaId),
+            getLogoUrl(selectedGame.equipaForaId)
+        ]);
+        if (logoCasaUrl) {
+            logoCasaImg.src = logoCasaUrl;
+            logoCasaImg.style.display = 'block';
+        }
+        if (logoForaUrl) {
+            logoForaImg.src = logoForaUrl;
+            logoForaImg.style.display = 'block';
+        }
     };
     
     const updateGeneratedFields = () => {
@@ -322,10 +346,7 @@
         let videoId = null;
         const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
         const match = url.match(youtubeRegex);
-        if (match && match[1]) {
-            videoId = match[1];
-        }
-
+        if (match && match[1]) videoId = match[1];
         if (videoId) {
             videoPreviewContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
         } else {
@@ -336,15 +357,12 @@
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedGame || saveBtn.disabled) return;
-
         const originalBtnText = saveBtn.textContent;
         saveBtn.disabled = true;
         saveBtn.textContent = 'A gravar...';
-        
         const dataFormatada = formatGameDate(selectedGame.dataJogo);
         const casa = resultadoCasaInput.value;
         const fora = resultadoForaInput.value;
-
         const updatedData = {
             resultadoCasa: casa,
             resultadoFora: fora,
@@ -353,18 +371,13 @@
             nomeJogo: `${selectedGame.equipaCasaNome} ${casa}-${fora} ${selectedGame.equipaForaNome} - ${dataFormatada}`,
             apiYt: useLinkOnlyCheckbox.checked
         };
-
         try {
             await updateDoc(doc(db, 'jogos', selectedGame.id), updatedData);
-            
             const gameIndexInDb = allGamesFromDb.findIndex(g => g.id === selectedGame.id);
             if (gameIndexInDb > -1) allGamesFromDb[gameIndexInDb] = { ...allGamesFromDb[gameIndexInDb], ...updatedData };
-            
             const gameIndexInFiltered = filteredGames.findIndex(g => g.id === selectedGame.id);
             if (gameIndexInFiltered > -1) filteredGames[gameIndexInFiltered] = { ...filteredGames[gameIndexInFiltered], ...updatedData };
-
             selectedGame = { ...selectedGame, ...updatedData };
-            
             const listItem = document.querySelector(`#gamesList li[data-id="${selectedGame.id}"]`);
             if(listItem) {
                 const hasVideo = updatedData.videoUrl && updatedData.videoUrl.trim() !== '';
@@ -372,13 +385,9 @@
                 statusIndicator.className = `status-indicator ${hasVideo ? 'status-green' : 'status-red'}`;
                 listItem.querySelector('span:last-child').textContent = updatedData.nomeJogo;
             }
-            
             saveBtn.textContent = 'Gravado!';
             saveBtn.style.backgroundColor = '#218838';
-
-            // NOVO: Atualiza o contador de dias após gravar uma alteração
             updateDaySelectorWithCounts();
-
         } catch (error) {
             console.error("Erro ao gravar alterações: ", error);
             alert("Ocorreu um erro ao gravar. Tente novamente.");
@@ -401,8 +410,6 @@
     });
 
     // --- Event Listeners ---
-    
-    // ALTERADO: Os listeners de mês e temporada agora atualizam os contadores de dia.
     seasonSelector.addEventListener('change', () => {
         updateDaySelectorWithCounts();
         applyFiltersAndRender();
@@ -413,27 +420,23 @@
     });
     daySelector.addEventListener('change', applyFiltersAndRender);
     
-    gamesList.addEventListener('click', (e) => {
+    gamesList.addEventListener('click', async (e) => {
         const li = e.target.closest('.game-list-item');
-        if (li) selectGame(li.dataset.id);
+        if (li) await selectGame(li.dataset.id);
     });
 
     resultadoCasaInput.addEventListener('input', updateGeneratedFields);
     resultadoForaInput.addEventListener('input', updateGeneratedFields);
-
-    videoUrlInput.addEventListener('input', (e) => {
-        renderVideoPreview(e.target.value);
-    });
+    videoUrlInput.addEventListener('input', (e) => renderVideoPreview(e.target.value));
 
     // --- Inicialização ---
-    // ALTERADO: A ordem de inicialização mudou para carregar dados primeiro.
     document.addEventListener('DOMContentLoaded', async () => {
         try {
             await loadAllGames();
             initializeMonthSelector();
             await loadSeasonsAndSetDefault();
-            updateDaySelectorWithCounts(); // Primeira chamada para preencher os dias
-            applyFiltersAndRender(); // Renderiza a lista inicial
+            updateDaySelectorWithCounts();
+            applyFiltersAndRender();
         } catch (error) {
             console.error("Falha na inicialização da aplicação:", error);
         }
