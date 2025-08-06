@@ -368,82 +368,173 @@
         
         function findTeamByName(name) { return allClubs.find(c => c.nome.toLowerCase() === name.trim().toLowerCase()) || null; }
 
-  bulkModalElements.generateBtn.addEventListener('click', async () => {
-    const { text, list, panel } = bulkModalElements;
-    const rawText = text.value;
-    if (!rawText.trim()) { alert("Por favor, cole os dados dos jogos."); return; }
-    if (!tsBulkCompeticao.getValue()) { alert("Por favor, selecione uma competição."); return; }
+ // Substitua a função original por esta versão melhorada
+        bulkModalElements.generateBtn.addEventListener('click', async () => {
+            const { text, list, panel } = bulkModalElements;
+            const rawText = text.value;
+            if (!rawText.trim()) { alert("Por favor, cole os dados dos jogos."); return; }
+            if (!tsBulkCompeticao.getValue()) { alert("Por favor, selecione uma competição."); return; }
 
-    let gameCandidates = [];
-    const nameCheckList = new Set();
-    
-    // --- ALTERAÇÃO AQUI ---
-    // Adicionado suporte para 1PE, 2PE, 3PE com o padrão: |[1-3]PE
-    const regexWithScore = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+(\d+-\d+)\s*(?:\([^\)]+\))?\s+(.+?)\s+\4\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE)/i;
-    const regexWithVs = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+vs\s*(?:\([^\)]+\))?\s+(.+?)\s+\3\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE)/i;
-    // --- FIM DA ALTERAÇÃO ---
 
-    const gameBlocks = rawText.split(/h2h/i).filter(block => block.trim() !== '');
-
-    for (const block of gameBlocks) {
-        const singleLineBlock = block.replace(/\n/g, ' ').trim();
-        let match = singleLineBlock.match(regexWithScore);
-        let isFutureGame = !match;
-        if (isFutureGame) match = singleLineBlock.match(regexWithVs);
-
-        if (match) {
-            const dataJogo = match[1], equipaCasaNome = match[2].trim();
-            const equipaForaNome = isFutureGame ? match[3].trim() : match[4].trim();
-            const [resultadoCasa, resultadoFora] = isFutureGame ? [null, null] : match[3].split('-');
+    // Funções auxiliares para a nova lógica
+            const findClubMatches = (name) => allClubs.filter(c => c.nome.toLowerCase() === name.trim().toLowerCase());
             
-            let jornadaBruta = isFutureGame ? match[4] : match[5];
-            let jornadaFinal;
+            let gameCandidates = [];
+            const regexWithScore = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+(\d+-\d+)\s*(?:\([^\)]+\))?\s+(.+?)\s+\4\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE)/i;
+            const regexWithVs = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+vs\s*(?:\([^\)]+\))?\s+(.+?)\s+\3\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE)/i;
+            const gameBlocks = rawText.split(/h2h/i).filter(block => block.trim() !== '');
 
-            if (jornadaBruta && jornadaBruta.toUpperCase().startsWith('J')) {
-                jornadaFinal = jornadaBruta.substring(1);
-            } else {
-                jornadaFinal = jornadaBruta;
+   for (const block of gameBlocks) {
+                const singleLineBlock = block.replace(/\n/g, ' ').trim();
+                let match = singleLineBlock.match(regexWithScore);
+                let isFutureGame = !match;
+                if (isFutureGame) match = singleLineBlock.match(regexWithVs);
+
+                if (match) {
+                    const dataJogo = match[1], equipaCasaNome = match[2].trim();
+                    const equipaForaNome = isFutureGame ? match[3].trim() : match[4].trim();
+                    const [resultadoCasa, resultadoFora] = isFutureGame ? [null, null] : match[3].split('-');
+                    let jornadaBruta = isFutureGame ? match[4] : match[5];
+                    let jornadaFinal = (jornadaBruta && jornadaBruta.toUpperCase().startsWith('J')) ? jornadaBruta.substring(1) : jornadaBruta;
+                    
+                    gameCandidates.push({ dataJogo, jornada: jornadaFinal, equipaCasaNome, equipaForaNome, resultadoCasa, resultadoFora });
+                }
             }
 
-            const equipaCasa = findTeamByName(equipaCasaNome), equipaFora = findTeamByName(equipaForaNome);
+ // Início da Lógica de Desambiguação
+            const ambiguities = new Map();
+            const resolvedChoices = new Map();
 
-            let candidate = { dataJogo, jornada: jornadaFinal, equipaCasaNome, equipaForaNome, resultadoCasa, resultadoFora, equipaCasaId: equipaCasa?.id || null, equipaForaId: equipaFora?.id || null, isValid: !!(equipaCasa && equipaFora), invalidReason: '' };
-            
-            if (!equipaCasa) candidate.invalidReason = `Equipa "${equipaCasaNome}" não encontrada.`;
-            else if (!equipaFora) candidate.invalidReason = `Equipa "${equipaForaNome}" não encontrada.`;
-            
-            const [y,m,d] = dataJogo.split('-');
-            const resultadoFinal = isFutureGame ? 'X' : `${resultadoCasa}-${resultadoFora}`;
-            candidate.nomeJogo = `${equipaCasaNome} ${resultadoFinal} ${equipaForaNome} - ${d}/${m}/${y}`;
-            
-            if (candidate.isValid) nameCheckList.add(candidate.nomeJogo);
-            gameCandidates.push(candidate);
-        }
-    }
+            for (const candidate of gameCandidates) {
+                [candidate.equipaCasaNome, candidate.equipaForaNome].forEach(name => {
+                    if (resolvedChoices.has(name) || ambiguities.has(name)) return;
+                    
+                    const matches = findClubMatches(name);
+                    if (matches.length > 1) {
+                        ambiguities.set(name, matches);
+                    } else if (matches.length === 1) {
+                        resolvedChoices.set(name, matches[0].id);
+                    }
+                });
+            }
 
-    const existingGames = new Set();
-    if (nameCheckList.size > 0) {
-        const namesToQuery = Array.from(nameCheckList);
-        const chunks = [];
-        for (let i = 0; i < namesToQuery.length; i += 30) chunks.push(namesToQuery.slice(i, i + 30));
-        const queryPromises = chunks.map(chunk => getDocs(query(collection(db, "jogos"), where("nomeJogo", "in", chunk))));
-        const querySnapshots = await Promise.all(queryPromises);
-        querySnapshots.forEach(snapshot => snapshot.forEach(doc => existingGames.add(doc.data().nomeJogo)));
-    }
+if (ambiguities.size > 0) {
+                // Se houver ambiguidades, inicia o processo de resolução interativo
+                await resolveNextAmbiguity(ambiguities, resolvedChoices, gameCandidates);
+            } else {
+                // Se não houver, vai direto para a criação da lista de pré-visualização
+                buildFinalPreviewList(gameCandidates, resolvedChoices);
+            }
+        });
+
+
+// FUNÇÃO NOVA: Constrói a lista final de pré-visualização
+        async function buildFinalPreviewList(gameCandidates, resolvedChoices) {
+            const { list, panel } = bulkModalElements;
+            const findClubMatches = (name) => allClubs.filter(c => c.nome.toLowerCase() === name.trim().toLowerCase());
+            let nameCheckList = new Set();
+            
+            // Adiciona IDs e valida os candidatos
+            gameCandidates.forEach(candidate => {
+                const homeId = resolvedChoices.get(candidate.equipaCasaNome);
+                const awayId = resolvedChoices.get(candidate.equipaForaNome);
+
+                candidate.equipaCasaId = homeId || null;
+                candidate.equipaForaId = awayId || null;
+                candidate.isValid = !!(homeId && awayId);
+
+                if (!candidate.isValid) {
+                    candidate.invalidReason = !homeId ? `Equipa "${candidate.equipaCasaNome}" não encontrada ou ambígua.` : `Equipa "${candidate.equipaForaNome}" não encontrada ou ambígua.`;
+                }
+                
+                const [y,m,d] = candidate.dataJogo.split('-');
+                const resultadoFinal = candidate.resultadoCasa !== null ? `${candidate.resultadoCasa}-${candidate.resultadoFora}` : 'X';
+                candidate.nomeJogo = `${candidate.equipaCasaNome} ${resultadoFinal} ${candidate.equipaForaNome} - ${d}/${m}/${y}`;
+                if (candidate.isValid) nameCheckList.add(candidate.nomeJogo);
+            });
+
+
+            
+    // Verifica jogos existentes no DB
+            const existingGames = new Set();
+            if (nameCheckList.size > 0) {
+                const namesToQuery = Array.from(nameCheckList);
+                const chunks = [];
+                for (let i = 0; i < namesToQuery.length; i += 30) chunks.push(namesToQuery.slice(i, i + 30));
+                const queryPromises = chunks.map(chunk => getDocs(query(collection(db, "jogos"), where("nomeJogo", "in", chunk))));
+                const querySnapshots = await Promise.all(queryPromises);
+                querySnapshots.forEach(snapshot => snapshot.forEach(doc => existingGames.add(doc.data().nomeJogo)));
+            }
     
-    list.innerHTML = '';
-    gameCandidates.forEach((game, index) => {
-        let isInvalid = !game.isValid, invalidReason = game.invalidReason;
-        if (game.isValid && existingGames.has(game.nomeJogo)) { isInvalid = true; invalidReason = 'Jogo já existe.'; }
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'preview-item' + (isInvalid ? ' is-invalid' : '');
-        itemDiv.innerHTML = `<input type="checkbox" id="game-check-${index}" data-index="${index}" ${isInvalid ? 'disabled' : 'checked'}><label for="game-check-${index}">${game.nomeJogo}</label>${isInvalid ? `<span class="invalid-reason">${invalidReason}</span>` : ''}`;
-        list.appendChild(itemDiv);
-    });
-    window.gameCandidates = gameCandidates;
-    panel.style.display = 'block';
-});
+   // Popula a lista na UI
+            list.innerHTML = '';
+            gameCandidates.forEach((game, index) => {
+                let isInvalid = !game.isValid;
+                let invalidReason = game.invalidReason;
+                if (game.isValid && existingGames.has(game.nomeJogo)) {
+                    isInvalid = true;
+                    invalidReason = 'Jogo já existe.';
+                }
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'preview-item' + (isInvalid ? ' is-invalid' : '');
+                itemDiv.innerHTML = `<input type="checkbox" id="game-check-${index}" data-index="${index}" ${isInvalid ? 'disabled' : 'checked'}><label for="game-check-${index}">${game.nomeJogo}</label>${isInvalid ? `<span class="invalid-reason">${invalidReason}</span>` : ''}`;
+                list.appendChild(itemDiv);
+            });
+            window.gameCandidates = gameCandidates;
+            panel.style.display = 'block';
+        }
 
+         // FUNÇÃO NOVA: Gere o processo de resolução de ambiguidades
+        function resolveNextAmbiguity(ambiguities, resolvedChoices, gameCandidates) {
+            return new Promise(resolve => {
+                if (ambiguities.size === 0) {
+                    // Todas resolvidas, constrói a lista final
+                    buildFinalPreviewList(gameCandidates, resolvedChoices);
+                    resolve();
+                    return;
+                }
+
+
+ const [name, clubs] = ambiguities.entries().next().value;
+                const modal = document.getElementById('disambiguationModal');
+                const nameHolder = document.getElementById('ambiguousClubName');
+                const optionsContainer = document.getElementById('disambiguationOptions');
+                const confirmBtn = document.getElementById('confirmDisambiguationBtn');
+                
+                nameHolder.textContent = name;
+                optionsContainer.innerHTML = '';
+
+                clubs.forEach(club => {
+                    const pais = allPaises.find(p => p.id === club.paisId);
+                    const paisNome = pais ? pais.nome : 'País não definido';
+                    const optionHTML = `
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                            <input type="radio" name="club-choice" value="${club.id}" style="margin-right: 15px;">
+                            <img src="${club.logoUrl || 'https://via.placeholder.com/20'}" style="width: 20px; height: 20px; margin-right: 10px; object-fit: contain;">
+                            <span style="flex-grow: 1;">${club.nome}</span>
+                            <strong style="margin-left: 10px;">${paisNome}</strong>
+                        </label>
+                    `;
+                    optionsContainer.insertAdjacentHTML('beforeend', optionHTML);
+                });
+
+                const onConfirm = () => {
+                    const selected = optionsContainer.querySelector('input:checked');
+                    if (selected) {
+                        resolvedChoices.set(name, selected.value); // Guarda a escolha
+                        ambiguities.delete(name); // Remove da lista de ambiguidades
+                        modal.style.display = 'none';
+                        confirmBtn.removeEventListener('click', onConfirm); // Limpa o listener
+                        resolve(resolveNextAmbiguity(ambiguities, resolvedChoices, gameCandidates)); // Chama recursivamente para o próximo
+                    } else {
+                        alert("Por favor, selecione uma equipa.");
+                    }
+                };
+
+                confirmBtn.addEventListener('click', onConfirm);
+                modal.style.display = 'block';
+            });
+        }
 
   const equipaNomeInput = document.getElementById('equipaNome');
     const equipaNomeErrorSpan = document.getElementById('equipaNomeError');
@@ -559,7 +650,7 @@
             document.removeEventListener('mouseup', onMouseUp);
         }
 
-    document.getElementById('formCriarJogo').addEventListener('submit', async function(e) {
+   document.getElementById('formCriarJogo').addEventListener('submit', async function(e) {
     e.preventDefault();
     const form = this;
     const data = Object.fromEntries(new FormData(form).entries());
@@ -573,50 +664,49 @@
     }
 
     // Query 1: Nome exato
-    const qNome = query(collection(db, "jogos"), where("nomeJogo", "==", nomeJogo));
-    
-    // Query 2: Casa vs Fora na data
+     const qNome = query(collection(db, "jogos"), where("nomeJogo", "==", nomeJogo));
     const qCombinacao1 = query(collection(db, "jogos"), 
         where("dataJogo", "==", dataJogo),
         where("equipaCasaId", "==", equipaCasaId),
         where("equipaForaId", "==", equipaForaId)
     );
-
-    // Query 3: Fora vs Casa na data
     const qCombinacao2 = query(collection(db, "jogos"), 
         where("dataJogo", "==", dataJogo),
-        where("equipaCasaId", "==", equipaForaId), // Invertido
-        where("equipaForaId", "==", equipaCasaId)  // Invertido
+        where("equipaCasaId", "==", equipaForaId),
+        where("equipaForaId", "==", equipaCasaId)
     );
+
     
-    const [snapNome, snapCombinacao1, snapCombinacao2] = await Promise.all([
+   const [snapNome, snapCombinacao1, snapCombinacao2] = await Promise.all([
         getDocs(qNome), getDocs(qCombinacao1), getDocs(qCombinacao2)
     ]);
 
     if (!snapNome.empty || !snapCombinacao1.empty || !snapCombinacao2.empty) {
         alert("Erro: O jogo que está a tentar criar já existe (mesmas equipas na mesma data).");
-        return; // Impede a submissão
+        return;
     }
+
     // --- FIM DA VERIFICAÇÃO ---
     
     data.competicaoNome = tsJogoCompeticao.options[data.competicaoId]?.nome;
     data.equipaCasaNome = tsJogoEquipaCasa.options[data.equipaCasaId]?.nome;
     data.equipaForaNome = tsJogoEquipaFora.options[data.equipaForaId]?.nome;
 
-    const useLinkOnly = document.getElementById('useLinkOnlyCheckbox').checked;
+   const useLinkOnly = document.getElementById('useLinkOnlyCheckbox').checked;
     if (data.videoUrl && useLinkOnly) {
         data.apiYt = true;
     }
 
-    try {
+ try {
+        // 1. Grava os dados no Firebase
         await addDoc(collection(db, "jogos"), data);
+
+        // 2. Avisa o utilizador que foi um sucesso
         alert("Jogo criado!");
-        form.reset();
-        tsJogoCompeticao.clear();
-        resetEquipasDropdowns();
-        document.getElementById('jogoNomeError').textContent = ''; // Limpa o erro
-        document.querySelector('#formCriarJogo button[type="submit"]').disabled = false; // Reativa o botão
-        hidePanel();
+        
+        // 3. Recarrega a página. Fim do processo.
+        location.reload(); 
+
     } catch (err) {
         alert("Erro: " + err.message);
     }
@@ -624,7 +714,7 @@
 
         document.getElementById('formCriarJogador').addEventListener('submit', async function(e) { e.preventDefault(); try { await addDoc(collection(db, "jogadores"), Object.fromEntries(new FormData(this).entries())); alert("Jogador criado!"); this.reset(); } catch(err){ alert("Erro: "+err.message); }});
         
-      document.getElementById('formCriarEquipa').addEventListener('submit', async function(e) {
+     document.getElementById('formCriarEquipa').addEventListener('submit', async function(e) {
     e.preventDefault();
     const fd = new FormData(this);
     const d = Object.fromEntries(fd.entries());
@@ -632,23 +722,22 @@
     const errorSpan = document.getElementById('equipaNomeError');
     const existe = allClubs.some(club => club.nome.toLowerCase() === nomeEquipaParaVerificar);
 
-    // A verificação é mantida como uma salvaguarda final
     if (existe) {
         errorSpan.textContent = "Este clube já existe na base de dados!";
         return;
     }
 
-    d.competicoesIds = fd.getAll('competicoesIds');
+     d.competicoesIds = fd.getAll('competicoesIds');
     const preSeasonCompetition = allCompetitions.find(comp => comp.nome && comp.nome.trim().toLowerCase() === 'pre season');
     if (preSeasonCompetition && !d.competicoesIds.includes(preSeasonCompetition.id)) {
         d.competicoesIds.push(preSeasonCompetition.id);
     }
 
-    try {
+   try {
         await addDoc(collection(db, "clubes"), d);
-        alert("Equipa criada!");
+        // O alerta foi removido daqui.
         this.reset();
-        errorSpan.textContent = ''; // Limpa a mensagem de erro após o sucesso
+        errorSpan.textContent = '';
         fetchAllInitialData(); 
     } catch(err){
         alert("Erro: "+err.message);
@@ -1012,6 +1101,26 @@ updateResultadoFinal();
             </label>
         </div>
     </div>
+
+<!-- NOVO POPUP DE DESAMBIGUAÇÃO -->
+    <div id="disambiguationModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h4>Resolver Ambiguidade de Clube</h4>
+            </div>
+            <p style="margin-bottom: 15px;">O clube "<strong id="ambiguousClubName"></strong>" foi encontrado várias vezes. Por favor, selecione a equipa correta:</p>
+            <div id="disambiguationOptions" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- As opções serão inseridas aqui pelo JavaScript -->
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button id="confirmDisambiguationBtn" class="action-btn">Confirmar Seleção</button>
+            </div>
+        </div>
+    </div>
+    <!-- FIM DO NOVO POPUP -->
+
+
+
 
 </body>
 </html>
