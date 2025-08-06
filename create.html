@@ -813,77 +813,83 @@ function updateResultadoFinal() {
     updateNomeJogo();
 }
 
-        async function updateNomeJogo() {
-    if (!tsJogoEquipaCasa || !tsJogoEquipaCasa.options) return;
-    const { nomeJogo, data } = singleGameElements;
-    const casaId = tsJogoEquipaCasa.getValue(), foraId = tsJogoEquipaFora.getValue();
-    
-    const errorSpan = document.getElementById('jogoNomeError');
-    const submitBtn = document.querySelector('#formCriarJogo button[type="submit"]');
+       async function updateNomeJogo() {
+            if (!tsJogoEquipaCasa || !tsJogoEquipaCasa.options) return;
+            const { nomeJogo, data } = singleGameElements;
+            const casaId = tsJogoEquipaCasa.getValue(), foraId = tsJogoEquipaFora.getValue();
+            
+            const errorSpan = document.getElementById('jogoNomeError');
+            const submitBtn = document.querySelector('#formCriarJogo button[type="submit"]');
 
-    if(!casaId || !foraId || !data.value || casaId === foraId) {
-        nomeJogo.value = '';
-        errorSpan.textContent = (casaId && foraId && casaId === foraId) ? "As equipas devem ser diferentes." : "";
-        submitBtn.disabled = (casaId === foraId);
-        return;
-    }
-    
-    const casaNome = tsJogoEquipaCasa.options[casaId]?.nome;
-    const foraNome = tsJogoEquipaFora.options[foraId]?.nome;
-    if(!casaNome || !foraNome) return;
-    
-    const hoje = new Date(); hoje.setHours(0,0,0,0);
-    const resultado = new Date(data.value + 'T00:00:00') >= hoje ? 'X' : singleGameElements.resFinal.value;
-    const [y,m,d] = data.value.split('-');
-    const nomeJogoCalculado = `${casaNome} ${resultado} ${foraNome} - ${d}/${m}/${y}`;
-    nomeJogo.value = nomeJogoCalculado;
+            if(!casaId || !foraId || !data.value || casaId === foraId) {
+                nomeJogo.value = '';
+                errorSpan.textContent = (casaId && foraId && casaId === foraId) ? "As equipas devem ser diferentes." : "";
+                submitBtn.disabled = (casaId === foraId);
+                return;
+            }
+            
+            const casaNome = tsJogoEquipaCasa.options[casaId]?.nome;
+            const foraNome = tsJogoEquipaFora.options[foraId]?.nome;
+            if(!casaNome || !foraNome) return;
+            
+            const hoje = new Date(); 
+            hoje.setHours(0,0,0,0);
+            
+            // --- LINHA MODIFICADA ---
+            const resultado = new Date(data.value + 'T00:00:00') > hoje ? 'X' : singleGameElements.resFinal.value;
+            // --- FIM DA MODIFICAÇÃO ---
+            
+            const [y,m,d] = data.value.split('-');
+            const nomeJogoCalculado = `${casaNome} ${resultado} ${foraNome} - ${d}/${m}/${y}`;
+            nomeJogo.value = nomeJogoCalculado;
 
-    // --- LÓGICA DE VERIFICAÇÃO AVANÇADA ---
-    let gameExists = false;
-    let errorMessage = "";
-    const dataJogo = data.value;
+            // --- LÓGICA DE VERIFICAÇÃO AVANÇADA ---
+            let gameExists = false;
+            let errorMessage = "";
+            const dataJogo = data.value;
 
-    // Query 1: Verifica o nome exato do jogo
-    const qNome = query(collection(db, "jogos"), where("nomeJogo", "==", nomeJogoCalculado));
-    
-    // Query 2: Verifica Casa vs Fora na mesma data
-    const qCombinacao1 = query(collection(db, "jogos"), 
-        where("dataJogo", "==", dataJogo),
-        where("equipaCasaId", "==", casaId),
-        where("equipaForaId", "==", foraId)
-    );
+            // Query 1: Verifica o nome exato do jogo
+            const qNome = query(collection(db, "jogos"), where("nomeJogo", "==", nomeJogoCalculado));
+            
+            // Query 2: Verifica Casa vs Fora na mesma data
+            const qCombinacao1 = query(collection(db, "jogos"), 
+                where("dataJogo", "==", dataJogo),
+                where("equipaCasaId", "==", casaId),
+                where("equipaForaId", "==", foraId)
+            );
 
-    // Query 3: Verifica Fora vs Casa na mesma data
-    const qCombinacao2 = query(collection(db, "jogos"), 
-        where("dataJogo", "==", dataJogo),
-        where("equipaCasaId", "==", foraId), // Invertido
-        where("equipaForaId", "==", casaId)  // Invertido
-    );
+            // Query 3: Verifica Fora vs Casa na mesma data
+            const qCombinacao2 = query(collection(db, "jogos"), 
+                where("dataJogo", "==", dataJogo),
+                where("equipaCasaId", "==", foraId), // Invertido
+                where("equipaForaId", "==", casaId)  // Invertido
+            );
 
-    // Executa todas as consultas em paralelo para eficiência
-    const [snapNome, snapCombinacao1, snapCombinacao2] = await Promise.all([
-        getDocs(qNome),
-        getDocs(qCombinacao1),
-        getDocs(qCombinacao2)
-    ]);
+            // Executa todas as consultas em paralelo para eficiência
+            const [snapNome, snapCombinacao1, snapCombinacao2] = await Promise.all([
+                getDocs(qNome),
+                getDocs(qCombinacao1),
+                getDocs(qCombinacao2)
+            ]);
 
-    if (!snapNome.empty) {
-        gameExists = true;
-        errorMessage = "Este jogo (nome exato) já existe!";
-    } else if (!snapCombinacao1.empty || !snapCombinacao2.empty) {
-        gameExists = true;
-        errorMessage = "Já existe um jogo entre estas duas equipas nesta data.";
-    }
+            if (!snapNome.empty) {
+                gameExists = true;
+                errorMessage = "Este jogo (nome exato) já existe!";
+            } else if (!snapCombinacao1.empty || !snapCombinacao2.empty) {
+                gameExists = true;
+                errorMessage = "Já existe um jogo entre estas duas equipas nesta data.";
+            }
 
-    // Atualiza a UI com o resultado
-    if (gameExists) {
-        errorSpan.textContent = errorMessage;
-        submitBtn.disabled = true;
-    } else {
-        errorSpan.textContent = "";
-        submitBtn.disabled = false;
-    }
-}
+            // Atualiza a UI com o resultado
+            if (gameExists) {
+                errorSpan.textContent = errorMessage;
+                submitBtn.disabled = true;
+            } else {
+                errorSpan.textContent = "";
+                submitBtn.disabled = false;
+            }
+        }
+        
     async function calculateNextJornada() {
     if (!tsJogoEquipaCasa) return;
     const { jornada, temporada } = singleGameElements;
@@ -1118,9 +1124,6 @@ updateResultadoFinal();
         </div>
     </div>
     <!-- FIM DO NOVO POPUP -->
-
-
-
 
 </body>
 </html>
