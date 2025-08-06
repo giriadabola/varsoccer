@@ -51,8 +51,29 @@
         .settings-list li select { flex-basis: 80px; padding: 4px; }
         .arrow-btn { background: none; border: 1px solid #ccc; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
         .arrow-btn:hover { background-color: #f0f0f0; }
+
+        .toggle-btn {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    font-size: 0.95em;
+    text-align: center;
+    color: #555;
+    transition: all 0.2s;
+}
+.toggle-btn.active {
+    background-color: #dc3545; /* Vermelho para indicar estado ativo */
+    color: white;
+    border-color: #c82333;
+    font-weight: bold;
+}
+
     </style>
 </head>
+
 <body>
 
     <!-- BOTÃO DE CONFIGURAÇÕES -->
@@ -85,7 +106,7 @@
     </div>
     
     <div class="tab-container">
-        <!-- O resto do seu conteúdo HTML (abas) permanece aqui, inalterado -->
+        <!-- Botões das Abas -->
         <div class="tab-buttons">
             <button class="tab-button active" onclick="openTab(event, 'tabJogo')">Editar Jogo</button>
             <button class="tab-button" onclick="openTab(event, 'tabJogador')">Editar Jogador</button>
@@ -95,6 +116,7 @@
             <button class="tab-button" onclick="openTab(event, 'tabTemporada')">Editar Temporada</button>
         </div>
         
+        <!-- Aba Editar Jogo (já com as suas modificações) -->
         <div id="tabJogo" class="tab-content active">
             <h3>Editar Jogo Existente</h3>
             <div class="search-container"><div class="form-group"><label for="searchJogo">Pesquisar Jogo:</label><select id="searchJogo" placeholder="Digite para pesquisar..."></select></div></div>
@@ -114,7 +136,8 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group"> <label for="jogoData">Data do Jogo:</label> <input type="date" id="jogoData" name="dataJogo" required> </div>
-                    <div class="form-group"> <label for="jogoTemporada">Temporada:</label> <select id="jogoTemporada" name="temporada" required></select> </div>
+                    <div class="form-group" style="flex: 1;"> <label for="jogoTemporada">Temporada:</label> <select id="jogoTemporada" name="temporada" required></select> </div>
+                    <div class="form-group" style="flex: 0.8;"> <label>&nbsp;</label> <button type="button" id="postponedBtn" class="toggle-btn">Postponed</button> </div>
                     <div class="form-group" style="flex: 0.5;"> <label for="jogoJornada">Jornada:</label> <select id="jogoJornada" name="jornada" required></select> </div>
                 </div>
                 <div class="form-group"> <label for="jogoNomeJogo">Nome do Jogo (Automático):</label> <input type="text" id="jogoNomeJogo" name="nomeJogo" readonly> </div>
@@ -122,6 +145,8 @@
                 <button type="submit" class="save-btn">Salvar Alterações</button>
             </fieldset></form>
         </div>
+
+        <!-- HTML RESTAURADO DAS OUTRAS ABAS -->
         <div id="tabJogador" class="tab-content">
             <h3>Editar Jogador Existente</h3>
             <div class="search-container"><div class="form-group"><label for="searchJogador">Pesquisar Jogador:</label><select id="searchJogador" placeholder="Digite para pesquisar..."></select></div></div>
@@ -180,7 +205,6 @@
                     <div class="form-group"> <label for="competicaoNamming">Namming:</label> <input type="text" id="competicaoNamming" name="namming"> </div>
                     <div class="form-group"> <label for="competicaoLogoUrl">Link para logo (URL):</label> <input type="url" id="competicaoLogoUrl" name="logoUrl"> </div>
                 </div>
-                <!-- NOVOS CAMPOS ADICIONADOS AO FORMULÁRIO DE COMPETIÇÃO -->
                 <div class="form-row">
                     <div class="form-group"> <label for="competicaoNoMenu">Aparece no Menu?</label> <select id="competicaoNoMenu" name="noMenu"><option value="No">Não</option><option value="Yes">Sim</option></select> </div>
                     <div class="form-group"> <label for="competicaoNoTopoMenu">Aparece no Topo?</label> <select id="competicaoNoTopoMenu" name="noTopoMenu"><option value="No">Não</option><option value="Yes">Sim</option></select> </div>
@@ -254,27 +278,35 @@
             }
         }
         
-      async function handleFormSubmit(e, collectionName, id) {
+     async function handleFormSubmit(e, collectionName, id) {
     e.preventDefault();
     if (!id) return;
 
     const form = e.target;
     const data = Object.fromEntries(new FormData(form).entries());
 
-    // Handle specific field types
     if (collectionName === 'clubes') {
         data.competicoesIds = Array.from(new FormData(form).getAll('competicoesIds'));
     }
     
-    // --- INÍCIO DA MODIFICAÇÃO ---
     if (collectionName === 'competicoes') {
-        // Se o campo 'posicaoMenu' não estiver vazio, converte para número.
-        // Se estiver vazio, define como null para ser salvo no banco de dados.
         data.posicaoMenu = data.posicaoMenu ? parseInt(data.posicaoMenu, 10) : null;
     }
-    // --- FIM DA MODIFICAÇÃO ---
     
-    if(collectionName === 'equipa') {
+    // --- INÍCIO DA MODIFICAÇÃO ---
+    if (collectionName === 'jogos') {
+        const isPostponed = document.getElementById('postponedBtn').classList.contains('active');
+        data.status = isPostponed ? 'Postponed' : 'Scheduled'; // ou qualquer outro status padrão
+
+        // Se adiado, limpa os resultados para garantir consistência
+        if (isPostponed) {
+            data.resultadoCasa = null;
+            data.resultadoFora = null;
+        }
+    }
+    // --- FIM DA MODIFICAÇÃO ---
+
+    if(collectionName === 'equipa') { // Nota: o nome da coleção é 'clubes', não 'equipa'
          data.capacidadeEstadio = data.capacidadeEstadio ? parseInt(data.capacidadeEstadio, 10) : 0;
     }
 
@@ -287,42 +319,48 @@
         document.getElementById(`fieldset${prefix}`).disabled = true;
         if (ts[`search${prefix}`]) ts[`search${prefix}`].clear();
         currentlyEditing[collectionName] = null;
-        await fetchAllInitialData(); // Await the refresh
+        await fetchAllInitialData(); 
     } catch (err) {
         console.error("Erro ao salvar:", err);
         alert("Erro ao salvar: " + err.message);
     }
 }
         
-   function loadSelectedItem(collectionName, id) {
-            const item = allData[collectionName].find(d => d.id === id);
-            const prefix = nameMap[collectionName];
-            if (item) {
-                currentlyEditing[collectionName] = id;
-                const fieldset = document.getElementById(`fieldset${prefix}`);
-                const form = document.getElementById(`formEdit${prefix}`);
-                
-                fieldset.disabled = false;
-                populateForm(form.id, item);
+ function loadSelectedItem(collectionName, id) {
+    const item = allData[collectionName].find(d => d.id === id);
+    const prefix = nameMap[collectionName];
+    if (item) {
+        currentlyEditing[collectionName] = id;
+        const fieldset = document.getElementById(`fieldset${prefix}`);
+        const form = document.getElementById(`formEdit${prefix}`);
+        
+        fieldset.disabled = false;
+        populateForm(form.id, item);
 
-                // Special handling for TomSelect fields after populating
-                if (collectionName === 'jogos') {
-                    // 1. FORÇA a atualização da lista de competições com base no gênero do jogo selecionado.
-                    populateCompetitionsForJogo(); 
-                    
-                    // 2. AGORA, com a lista correta, define o valor.
-                    ts.jogoCompeticao.setValue(item.competicaoId, true);
-                    
-                    // O restante continua como estava
-                    populateEquipasForJogo();
-                    ts.jogoEquipaCasa.setValue(item.equipaCasaId, true);
-                    ts.jogoEquipaFora.setValue(item.equipaForaId, true);
-                }
-                 if (collectionName === 'clubes') {
-                    if(ts.equipaCompeticoes) ts.equipaCompeticoes.setValue(item.competicoesIds || []);
-                }
+        if (collectionName === 'jogos') {
+            populateCompetitionsForJogo(); 
+            ts.jogoCompeticao.setValue(item.competicaoId, true);
+            
+            populateTeamsForJogo();
+            ts.jogoEquipaCasa.setValue(item.equipaCasaId, true);
+            ts.jogoEquipaFora.setValue(item.equipaForaId, true);
+            
+            // --- INÍCIO DA MODIFICAÇÃO ---
+            const postponedBtn = document.getElementById('postponedBtn');
+            if (item.status === 'Postponed') {
+                postponedBtn.classList.add('active');
+            } else {
+                postponedBtn.classList.remove('active');
             }
+            // Chama a função para garantir que a UI (campos desabilitados, etc.) reflita o estado carregado
+            updateNomeJogo(); 
+            // --- FIM DA MODIFICAÇÃO ---
         }
+         if (collectionName === 'clubes') {
+            if(ts.equipaCompeticoes) ts.equipaCompeticoes.setValue(item.competicoesIds || []);
+        }
+    }
+}
 
         // --- LÓGICA DO MODAL DE CONFIGURAÇÕES ---
 
@@ -430,10 +468,19 @@
 
         // --- FIM DA LÓGICA DO MODAL ---
 
-        function populateAllFormDropdowns() {
-             const temporadaSelect = document.getElementById('jogoTemporada');
-             temporadaSelect.innerHTML = '';
-           if(document.getElementById('jogoResultadoCasa').innerHTML === '') {
+       function populateAllFormDropdowns() {
+     const temporadaSelect = document.getElementById('jogoTemporada');
+     
+     // --- INÍCIO DA MODIFICAÇÃO ---
+     // Limpa e preenche o dropdown de Temporadas
+     temporadaSelect.innerHTML = '';
+     allData.temporadas.forEach(t => {
+        // O campo 'temporada' no jogo é uma string (ex: "2023/2024"), que corresponde ao 'nome' da temporada
+        temporadaSelect.innerHTML += `<option value="${t.nome}">${t.nome}</option>`;
+     });
+     // --- FIM DA MODIFICAÇÃO ---
+
+   if(document.getElementById('jogoResultadoCasa').innerHTML === '') {
     const resCasa = document.getElementById('jogoResultadoCasa');
     const resFora = document.getElementById('jogoResultadoFora');
     const jornada = document.getElementById('jogoJornada');
@@ -456,82 +503,136 @@
     });
 }
 
-             const paisesSelects = [document.getElementById('jogadorNacionalidade'), document.getElementById('equipaPais'), document.getElementById('competicaoPais')];
-             paisesSelects.forEach(sel => {
-                sel.innerHTML = ''; allData.paises.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.nome}</option>`; });
-             });
-             
-             // Usa TomSelect para as competições da equipa
-             if(ts.equipaCompeticoes) {
-                ts.equipaCompeticoes.clearOptions();
-                ts.equipaCompeticoes.addOptions(allData.competicoes);
-             }
-        }
+           const paisesSelects = [document.getElementById('jogadorNacionalidade'), document.getElementById('equipaPais'), document.getElementById('competicaoPais')];
+     paisesSelects.forEach(sel => {
+        sel.innerHTML = ''; allData.paises.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.nome}</option>`; });
+     });
+     
+     if(ts.equipaCompeticoes) {
+        ts.equipaCompeticoes.clearOptions();
+        ts.equipaCompeticoes.addOptions(allData.competicoes);
+     }
+}
+
         function populateCompetitionsForJogo() {
             if (!ts.jogoCompeticao) return;
             const gender = document.getElementById('jogoGenero').value;
             const filtered = allData.competicoes.filter(c => c.genero === gender);
             ts.jogoCompeticao.clearOptions(); ts.jogoCompeticao.addOptions(filtered);
         }
-        function populateEquipasForJogo() {
-            if (!ts.jogoCompeticao || !ts.jogoEquipaCasa) return;
-            const gender = document.getElementById('jogoGenero').value;
-            const competicaoId = ts.jogoCompeticao.getValue();
-            if(!competicaoId) return;
-            const filtered = allData.clubes.filter(c => c.genero === gender && c.competicoesIds?.includes(competicaoId));
-            ts.jogoEquipaCasa.clearOptions(); ts.jogoEquipaCasa.addOptions(filtered);
-            ts.jogoEquipaFora.clearOptions(); ts.jogoEquipaFora.addOptions(filtered);
-        }
-       function updateNomeJogo() {
-            const nomeJogoEl = document.getElementById('jogoNomeJogo'), 
-                  dataEl = document.getElementById('jogoData'),
-                  resultadoFinalEl = document.getElementById('jogoResultadoFinal'); // 1. Adiciona uma referência ao campo de resultado final.
+       function populateTeamsForJogo() {
+    if (!ts.jogoEquipaCasa || !ts.jogoEquipaFora) return;
+    const gender = document.getElementById('jogoGenero').value;
+    
+    // Filtra TODOS os clubes apenas pelo género selecionado
+    const filteredClubsByGender = allData.clubes.filter(c => c.genero === gender);
 
-            const casaItem = ts.jogoEquipaCasa.options[ts.jogoEquipaCasa.getValue()];
-            const foraItem = ts.jogoEquipaFora.options[ts.jogoEquipaFora.getValue()];
+    // Guarda os valores atualmente selecionados para não os perder ao recarregar a lista
+    const currentCasaId = ts.jogoEquipaCasa.getValue();
+    const currentForaId = ts.jogoEquipaFora.getValue();
 
-            // Se as equipas não estiverem selecionadas, limpa os campos e sai
-            if(!casaItem || !foraItem || !dataEl.value) { 
-                nomeJogoEl.value = '';
-                resultadoFinalEl.value = '';
-                return;
-            }
-            
-            const hoje = new Date();
-            hoje.setHours(0,0,0,0);
-            
-            const jogoDate = new Date(dataEl.value + 'T00:00:00');
-            const resFinal = jogoDate >= hoje ? 'X' : `${document.getElementById('jogoResultadoCasa').value}-${document.getElementById('jogoResultadoFora').value}`;
-            
-            // 2. A LINHA QUE CORRIGE O BUG: Atualiza o campo "Resultado Final".
-            resultadoFinalEl.value = resFinal;
+    // Limpa e adiciona a lista completa de clubes (filtrada por género)
+    ts.jogoEquipaCasa.clearOptions();
+    ts.jogoEquipaCasa.addOptions(filteredClubsByGender);
+    ts.jogoEquipaFora.clearOptions();
+    ts.jogoEquipaFora.addOptions(filteredClubsByGender);
 
-            const [y,m,d] = dataEl.value.split('-');
-            nomeJogoEl.value = `${casaItem.nome} ${resFinal} ${foraItem.nome} - ${d}/${m}/${y}`;
-        }
+    // Restaura os valores que estavam selecionados (sem disparar eventos)
+    ts.jogoEquipaCasa.setValue(currentCasaId, true);
+    ts.jogoEquipaFora.setValue(currentForaId, true);
+}
+
+      function updateNomeJogo() {
+    const nomeJogoEl = document.getElementById('jogoNomeJogo');
+    const dataEl = document.getElementById('jogoData');
+    const resultadoFinalEl = document.getElementById('jogoResultadoFinal');
+    const casaResEl = document.getElementById('jogoResultadoCasa');
+    const foraResEl = document.getElementById('jogoResultadoFora');
+    const postponedBtn = document.getElementById('postponedBtn');
+
+    const casaItem = ts.jogoEquipaCasa.options[ts.jogoEquipaCasa.getValue()];
+    const foraItem = ts.jogoEquipaFora.options[ts.jogoEquipaFora.getValue()];
+    const isPostponed = postponedBtn.classList.contains('active');
+
+    // Se as equipas não estiverem selecionadas, limpa os campos e sai
+    if (!casaItem || !foraItem) {
+        nomeJogoEl.value = '';
+        resultadoFinalEl.value = '';
+        return;
+    }
+            
+         let resFinal;
+
+    if (isPostponed) {
+        // Lógica para jogo adiado
+        resFinal = 'PPD';
+        casaResEl.value = '';
+        foraResEl.value = '';
+        casaResEl.disabled = true;
+        foraResEl.disabled = true;
+    } else {
+        // Lógica original
+        casaResEl.disabled = false;
+        foraResEl.disabled = false;
+
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const jogoDate = dataEl.value ? new Date(dataEl.value + 'T00:00:00') : null;
         
-        function setupEventListeners() {
-            ts.searchJogo.on('change', (id) => loadSelectedItem('jogos', id));
-            ts.searchJogador.on('change', (id) => loadSelectedItem('jogadores', id));
-            ts.searchEquipa.on('change', (id) => loadSelectedItem('clubes', id));
-            ts.searchCompeticao.on('change', (id) => loadSelectedItem('competicoes', id));
-            ts.searchPais.on('change', (id) => loadSelectedItem('paises', id));
-            ts.searchTemporada.on('change', (id) => loadSelectedItem('temporadas', id));
-            
-            ts.jogoCompeticao.on('change', populateEquipasForJogo);
-            ts.jogoEquipaCasa.on('change', updateNomeJogo);
-            ts.jogoEquipaFora.on('change', updateNomeJogo);
-
-            document.getElementById('jogoGenero').addEventListener('change', populateCompetitionsForJogo);
-            [ document.getElementById('jogoResultadoCasa'), document.getElementById('jogoResultadoFora'), document.getElementById('jogoData') ].forEach(el => el.addEventListener('change', updateNomeJogo));
-            
-            document.getElementById('formEditJogo').addEventListener('submit', (e) => handleFormSubmit(e, 'jogos', currentlyEditing.jogos));
-            document.getElementById('formEditJogador').addEventListener('submit', (e) => handleFormSubmit(e, 'jogadores', currentlyEditing.jogadores));
-            document.getElementById('formEditEquipa').addEventListener('submit', (e) => handleFormSubmit(e, 'clubes', currentlyEditing.clubes));
-            document.getElementById('formEditCompeticao').addEventListener('submit', (e) => handleFormSubmit(e, 'competicoes', currentlyEditing.competicoes));
-            document.getElementById('formEditPais').addEventListener('submit', (e) => handleFormSubmit(e, 'paises', currentlyEditing.paises));
-            document.getElementById('formEditTemporada').addEventListener('submit', (e) => handleFormSubmit(e, 'temporadas', currentlyEditing.temporadas));
+        if (!jogoDate || jogoDate >= hoje) {
+            resFinal = 'X';
+        } else {
+            resFinal = `${casaResEl.value || '0'}-${foraResEl.value || '0'}`;
         }
+    }
+
+    resultadoFinalEl.value = resFinal;
+
+    // Atualiza o nome do jogo
+    if (dataEl.value) {
+        const [y, m, d] = dataEl.value.split('-');
+        nomeJogoEl.value = `${casaItem.nome} ${resFinal} ${foraItem.nome} - ${d}/${m}/${y}`;
+    } else {
+        nomeJogoEl.value = `${casaItem.nome} ${resFinal} ${foraItem.nome}`;
+    }
+}
+        
+       function setupEventListeners() {
+    ts.searchJogo.on('change', (id) => loadSelectedItem('jogos', id));
+    ts.searchJogador.on('change', (id) => loadSelectedItem('jogadores', id));
+    ts.searchEquipa.on('change', (id) => loadSelectedItem('clubes', id));
+    ts.searchCompeticao.on('change', (id) => loadSelectedItem('competicoes', id));
+    ts.searchPais.on('change', (id) => loadSelectedItem('paises', id));
+    ts.searchTemporada.on('change', (id) => loadSelectedItem('temporadas', id));
+    
+    // --- INÍCIO DA MODIFICAÇÃO ---
+    // REMOVIDO: O gatilho que filtrava as equipas ao mudar de competição
+    // ts.jogoCompeticao.on('change', populateEquipasForJogo); 
+
+    ts.jogoEquipaCasa.on('change', updateNomeJogo);
+    ts.jogoEquipaFora.on('change', updateNomeJogo);
+
+    // ALTERADO: Agora, ao mudar o género, atualiza tanto a lista de competições como a de equipas.
+    document.getElementById('jogoGenero').addEventListener('change', () => {
+        populateCompetitionsForJogo();
+        populateTeamsForJogo();
+    });
+    // --- FIM DA MODIFICAÇÃO ---
+
+     document.getElementById('postponedBtn').addEventListener('click', (e) => {
+        e.currentTarget.classList.toggle('active');
+        updateNomeJogo(); // Chama a função para aplicar as mudanças imediatamente
+    });
+    [ document.getElementById('jogoResultadoCasa'), document.getElementById('jogoResultadoFora'), document.getElementById('jogoData') ].forEach(el => el.addEventListener('change', updateNomeJogo));
+    
+    document.getElementById('formEditJogo').addEventListener('submit', (e) => handleFormSubmit(e, 'jogos', currentlyEditing.jogos));
+    document.getElementById('formEditJogador').addEventListener('submit', (e) => handleFormSubmit(e, 'jogadores', currentlyEditing.jogadores));
+    document.getElementById('formEditEquipa').addEventListener('submit', (e) => handleFormSubmit(e, 'clubes', currentlyEditing.clubes));
+    document.getElementById('formEditCompeticao').addEventListener('submit', (e) => handleFormSubmit(e, 'competicoes', currentlyEditing.competicoes));
+    document.getElementById('formEditPais').addEventListener('submit', (e) => handleFormSubmit(e, 'paises', currentlyEditing.paises));
+    document.getElementById('formEditTemporada').addEventListener('submit', (e) => handleFormSubmit(e, 'temporadas', currentlyEditing.temporadas));
+}
+
  async function fetchAllInitialData() {
             try {
                 const snaps = await Promise.all([
