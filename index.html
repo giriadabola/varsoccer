@@ -420,7 +420,7 @@
             });
         }
         
-  function renderFullList(games) {
+ function renderFullList(games) {
     const listContainer = document.getElementById('full-games-list');
     if (games.length === 0) {
         listContainer.innerHTML = '<p>Nenhum jogo encontrado.</p>';
@@ -428,7 +428,6 @@
     }
     listContainer.innerHTML = '';
 
-    // 1. Agrupar jogos por data
     const gamesByDate = games.reduce((acc, game) => {
         const dateKey = formatDate(game.dataJogo);
         if (!acc[dateKey]) acc[dateKey] = [];
@@ -436,49 +435,49 @@
         return acc;
     }, {});
 
-    // 2. Iterar sobre cada data, da mais recente para a mais antiga
     Object.keys(gamesByDate).sort((a, b) => parseDate(b) - parseDate(a)).forEach(date => {
         listContainer.innerHTML += `<h3 class="date-header">${date}</h3>`;
 
         const gamesForThisDay = gamesByDate[date];
 
-        // 3. ORDENAR a lista de jogos do dia usando múltiplos critérios
         gamesForThisDay.sort((gameA, gameB) => {
             const compA = competitionsMap.get(gameA.competicaoId);
             const compB = competitionsMap.get(gameB.competicaoId);
-
             const countryNameA = countriesMap.get(compA?.paisId)?.nome || '';
             const countryNameB = countriesMap.get(compB?.paisId)?.nome || '';
             const compNameA = compA?.nome || '';
             const compNameB = compB?.nome || '';
-
-            // Critério 1: Ordenar por nome do País (alfabético)
             const countryComparison = countryNameA.localeCompare(countryNameB);
-            if (countryComparison !== 0) {
-                return countryComparison;
-            }
-
-            // Critério 2: Se o país for o mesmo, ordenar por nome da Competição (alfabético)
+            if (countryComparison !== 0) return countryComparison;
             const compComparison = compNameA.localeCompare(compNameB);
-            if (compComparison !== 0) {
-                return compComparison;
-            }
-            
-            // Critério 3: Se a competição for a mesma, ordenar por nome do Jogo (alfabético)
-            // <<< LINHA CORRIGIDA
+            if (compComparison !== 0) return compComparison;
             return gameA.nomeJogo.localeCompare(gameB.nomeJogo);
         });
 
-        // 4. Renderizar a lista de jogos já ordenada
         gamesForThisDay.forEach(game => {
             const comp = competitionsMap.get(game.competicaoId);
             const country = comp ? countriesMap.get(comp.paisId) : null;
             
+            // --- INÍCIO DA LÓGICA CORRIGIDA E MAIS ROBUSTA ---
+            let imageUrl = '';
+            let imageTitle = '';
+
+            // Usar o logo da competição APENAS SE for internacional E o URL do logo existir.
+            if (comp && (comp.tipo === "Internacional Clubes" || comp.tipo === "Internacional Taça") && comp.logoUrl) {
+                imageUrl = comp.logoUrl;
+                imageTitle = comp.nome;
+            } else {
+                // Para TODOS os outros casos (ligas domésticas, ou jogos internacionais SEM logo), usar a bandeira do país.
+                imageUrl = country?.bandeiraUrl || ''; // Fallback para a bandeira do país
+                imageTitle = country?.nome || '';
+            }
+            // --- FIM DA LÓGICA CORRIGIDA ---
+
             let competitionNameSuffix = (comp && (comp.escalao === 'Inferior' || comp.tipo === 'Doméstica Taça')) ? ` <span class="competition-subtitle">(${comp.nome})</span>` : '';
             
             listContainer.innerHTML += `
                 <a href="game.html?id=${game.id}" class="match-list-item">
-                    <img src="${country?.bandeiraUrl || ''}" class="list-item-flag" title="${country?.nome || ''}">
+                    <img src="${imageUrl}" class="list-item-flag" title="${imageTitle}">
                     <span class="game-name">${game.nomeJogo}${competitionNameSuffix}</span>
                     <span class="game-jornada">Round ${game.jornada}</span>
                 </a>`;
