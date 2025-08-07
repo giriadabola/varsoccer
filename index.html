@@ -637,7 +637,7 @@
 
 
 
-        async function refreshGameDataAndUpdateUI() {
+       async function refreshGameDataAndUpdateUI() {
             try {
                 const now = new Date();
                 const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -651,7 +651,15 @@
                 );
                 
                 const snapshot = await getDocs(gamesQuery);
-                allFetchedGames = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // --- LINHA MODIFICADA ---
+                // Agora, filtramos os jogos cujo resultadoFinal é 'X' ou está vazio.
+                allFetchedGames = snapshot.docs
+                    .map(d => ({ id: d.id, ...d.data() }))
+                    .filter(game => {
+                        const result = game.resultadoFinal;
+                        return result && result.trim() !== '' && result.toUpperCase() !== 'X';
+                    });
 
                 renderHighlightsFilters();
                 renderLatestFive(allFetchedGames);
