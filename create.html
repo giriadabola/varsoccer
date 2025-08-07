@@ -369,63 +369,120 @@
         function findTeamByName(name) { return allClubs.find(c => c.nome.toLowerCase() === name.trim().toLowerCase()) || null; }
 
  // Substitua a função original por esta versão melhorada
-        bulkModalElements.generateBtn.addEventListener('click', async () => {
-            const { text, list, panel } = bulkModalElements;
-            const rawText = text.value;
-            if (!rawText.trim()) { alert("Por favor, cole os dados dos jogos."); return; }
-            if (!tsBulkCompeticao.getValue()) { alert("Por favor, selecione uma competição."); return; }
+  bulkModalElements.generateBtn.addEventListener('click', async () => {
+    const { text, generateBtn } = bulkModalElements;
+    const rawText = text.value;
 
+    if (!rawText.trim()) { alert("Por favor, cole os dados dos jogos."); return; }
+    
+    const competicaoId = tsBulkCompeticao.getValue();
+    const temporada = bulkModalElements.temporada.value;
+    const genero = bulkModalElements.genero.value;
 
-    // Funções auxiliares para a nova lógica
-            const findClubMatches = (name) => allClubs.filter(c => c.nome.toLowerCase() === name.trim().toLowerCase());
-            
-            let gameCandidates = [];
-            const regexWithScore = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+(\d+-\d+)\s*(?:\([^\)]+\))?\s+(.+?)\s+\4\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE)/i;
-            const regexWithVs = /\s*(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+vs\s*(?:\([^\)]+\))?\s+(.+?)\s+\3\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE)/i;
-            const gameBlocks = rawText.split(/h2h/i).filter(block => block.trim() !== '');
+    if (!competicaoId) { alert("Por favor, selecione uma competição."); return; }
 
-   for (const block of gameBlocks) {
-                const singleLineBlock = block.replace(/\n/g, ' ').trim();
-                let match = singleLineBlock.match(regexWithScore);
-                let isFutureGame = !match;
-                if (isFutureGame) match = singleLineBlock.match(regexWithVs);
+    // Desativa o botão e mostra feedback ao utilizador
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'A consultar a base de dados...';
 
+    try {
+        // PASSO 1: Consultar o Firebase para obter a contagem de jogos existentes
+        const teamGameCounts = new Map();
+        const q = query(
+            collection(db, "jogos"),
+            where("competicaoId", "==", competicaoId),
+            where("temporada", "==", temporada),
+            where("genero", "==", genero)
+        );
+
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach(doc => {
+            const game = doc.data();
+            const casa = game.equipaCasaNome;
+            const fora = game.equipaForaNome;
+            // Popula o contador com os jogos já existentes
+            teamGameCounts.set(casa, (teamGameCounts.get(casa) || 0) + 1);
+            teamGameCounts.set(fora, (teamGameCounts.get(fora) || 0) + 1);
+        });
+        
+        generateBtn.textContent = 'A gerar lista...';
+
+        // PASSO 2: Processar o texto colado, usando o contador pré-populado
+        let gameCandidates = [];
+        const regexWithVs = /(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+vs\s+(.+?)\s+\3\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE|C)/i;
+        const regexWithScore = /(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+(\d+-\d+)\s+(.+?)\s+\4\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE|C)/i;
+        
+        const gameBlocks = rawText.split(/h2h/i).filter(block => block.trim() !== '');
+
+        for (const block of gameBlocks) {
+            const singleLineBlock = block.replace(/\n/g, ' ').trim();
+            let match;
+            let gameData = {};
+
+            match = singleLineBlock.match(regexWithVs);
+            if (match) {
+                gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), equipaForaNome: match[3].trim(), jornadaBruta: match[4], resultadoCasa: null, resultadoFora: null };
+            } else {
+                match = singleLineBlock.match(regexWithScore);
                 if (match) {
-                    const dataJogo = match[1], equipaCasaNome = match[2].trim();
-                    const equipaForaNome = isFutureGame ? match[3].trim() : match[4].trim();
-                    const [resultadoCasa, resultadoFora] = isFutureGame ? [null, null] : match[3].split('-');
-                    let jornadaBruta = isFutureGame ? match[4] : match[5];
-                    let jornadaFinal = (jornadaBruta && jornadaBruta.toUpperCase().startsWith('J')) ? jornadaBruta.substring(1) : jornadaBruta;
-                    
-                    gameCandidates.push({ dataJogo, jornada: jornadaFinal, equipaCasaNome, equipaForaNome, resultadoCasa, resultadoFora });
+                    const [resCasa, resFora] = match[3].split('-');
+                    gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), resultadoCasa: resCasa, resultadoFora: resFora, equipaForaNome: match[4].trim(), jornadaBruta: match[5] };
                 }
             }
-
- // Início da Lógica de Desambiguação
-            const ambiguities = new Map();
-            const resolvedChoices = new Map();
-
-            for (const candidate of gameCandidates) {
-                [candidate.equipaCasaNome, candidate.equipaForaNome].forEach(name => {
-                    if (resolvedChoices.has(name) || ambiguities.has(name)) return;
-                    
-                    const matches = findClubMatches(name);
-                    if (matches.length > 1) {
-                        ambiguities.set(name, matches);
-                    } else if (matches.length === 1) {
-                        resolvedChoices.set(name, matches[0].id);
-                    }
-                });
+            
+            if (match) {
+                let jornadaFinal;
+                if (gameData.jornadaBruta && gameData.jornadaBruta.toUpperCase() === 'C') {
+                    // A contagem agora parte dos valores obtidos do Firebase
+                    const currentCountCasa = teamGameCounts.get(gameData.equipaCasaNome) || 0;
+                    const currentCountFora = teamGameCounts.get(gameData.equipaForaNome) || 0;
+                    const newCount = Math.max(currentCountCasa, currentCountFora) + 1;
+                    jornadaFinal = newCount;
+                    teamGameCounts.set(gameData.equipaCasaNome, newCount);
+                    teamGameCounts.set(gameData.equipaForaNome, newCount);
+                } else {
+                     jornadaFinal = (gameData.jornadaBruta && gameData.jornadaBruta.toUpperCase().startsWith('J')) ? gameData.jornadaBruta.substring(1) : gameData.jornadaBruta;
+                }
+                gameCandidates.push({ ...gameData, jornada: jornadaFinal });
+            } else if (singleLineBlock) {
+                 console.warn("Linha não reconhecida e ignorada:", singleLineBlock);
             }
+        }
 
-if (ambiguities.size > 0) {
-                // Se houver ambiguidades, inicia o processo de resolução interativo
-                await resolveNextAmbiguity(ambiguities, resolvedChoices, gameCandidates);
-            } else {
-                // Se não houver, vai direto para a criação da lista de pré-visualização
-                buildFinalPreviewList(gameCandidates, resolvedChoices);
-            }
-        });
+        // PASSO 3: Resolução de ambiguidades e exibição da pré-visualização (sem alterações)
+        const ambiguities = new Map();
+        const resolvedChoices = new Map();
+        const findClubMatches = (name) => allClubs.filter(c => c.nome.toLowerCase() === name.trim().toLowerCase());
+
+        for (const candidate of gameCandidates) {
+            [candidate.equipaCasaNome, candidate.equipaForaNome].forEach(name => {
+                if (resolvedChoices.has(name) || ambiguities.has(name)) return;
+                const matches = findClubMatches(name);
+                if (matches.length > 1) {
+                    ambiguities.set(name, matches);
+                } else if (matches.length === 1) {
+                    resolvedChoices.set(name, matches[0].id);
+                }
+            });
+        }
+
+        if (ambiguities.size > 0) {
+            await resolveNextAmbiguity(ambiguities, resolvedChoices, gameCandidates);
+        } else {
+            buildFinalPreviewList(gameCandidates, resolvedChoices);
+        }
+
+    } catch (error) {
+        console.error("Erro ao gerar lista de jogos:", error);
+        alert("Ocorreu um erro ao comunicar com a base de dados: " + error.message);
+    } finally {
+        // Reativa o botão e restaura o texto original, independentemente do resultado
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Gerar Lista de Jogos';
+    }
+});
+
+
 
 
 // FUNÇÃO NOVA: Constrói a lista final de pré-visualização
@@ -1124,6 +1181,9 @@ updateResultadoFinal();
         </div>
     </div>
     <!-- FIM DO NOVO POPUP -->
+
+
+
 
 </body>
 </html>
