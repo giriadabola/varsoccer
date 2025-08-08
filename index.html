@@ -144,6 +144,50 @@
     border: 1px solid #ddd;
 }
 
+@media (max-width: 992px) {
+    /* 1. Esconde a barra lateral em telas menores */
+    .sidebar {
+        display: none;
+    }
+
+    /* 2. Ajusta o layout principal para não esperar pela sidebar */
+    .content-wrapper {
+        display: block; /* Remove o flex para que o conteúdo ocupe o espaço */
+    }
+
+    /* 3. Ajusta o cabeçalho para telas mobile */
+    header {
+        padding: 10px 15px;
+    }
+
+    /* Remove o 'espaçador' direito no header que só existe para a versão desktop */
+    header > div:last-child {
+        display: none;
+    }
+
+    /* Centraliza e ajusta a barra de pesquisa global */
+    #global-search-container {
+        margin: 0 10px;
+        max-width: none;
+    }
+
+    /* 4. Ajusta o padding do conteúdo principal */
+    .main-content {
+        padding: 15px;
+    }
+
+    /* Garante que a grade de destaques se ajuste bem */
+    #latest-games-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+
+    /* Melhora a barra de filtros na lista de jogos */
+    #filter-bar {
+        flex-direction: column;
+        align-items: stretch; /* Faz os botões ocuparem a largura total */
+    }
+}
+
     </style>
 </head>
 <body>
