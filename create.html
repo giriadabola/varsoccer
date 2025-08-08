@@ -486,9 +486,8 @@
 
 
 // FUNÇÃO NOVA: Constrói a lista final de pré-visualização
-        async function buildFinalPreviewList(gameCandidates, resolvedChoices) {
+           async function buildFinalPreviewList(gameCandidates, resolvedChoices) {
             const { list, panel } = bulkModalElements;
-            const findClubMatches = (name) => allClubs.filter(c => c.nome.toLowerCase() === name.trim().toLowerCase());
             let nameCheckList = new Set();
             
             // Adiciona IDs e valida os candidatos
@@ -501,7 +500,7 @@
                 candidate.isValid = !!(homeId && awayId);
 
                 if (!candidate.isValid) {
-                    candidate.invalidReason = !homeId ? `Equipa "${candidate.equipaCasaNome}" não encontrada ou ambígua.` : `Equipa "${candidate.equipaForaNome}" não encontrada ou ambígua.`;
+                    candidate.invalidReason = !homeId ? `Equipa "${candidate.equipaCasaNome}" não encontrada.` : `Equipa "${candidate.equipaForaNome}" não encontrada.`;
                 }
                 
                 const [y,m,d] = candidate.dataJogo.split('-');
@@ -509,10 +508,8 @@
                 candidate.nomeJogo = `${candidate.equipaCasaNome} ${resultadoFinal} ${candidate.equipaForaNome} - ${d}/${m}/${y}`;
                 if (candidate.isValid) nameCheckList.add(candidate.nomeJogo);
             });
-
-
             
-    // Verifica jogos existentes no DB
+            // Verifica jogos existentes no DB
             const existingGames = new Set();
             if (nameCheckList.size > 0) {
                 const namesToQuery = Array.from(nameCheckList);
@@ -523,15 +520,33 @@
                 querySnapshots.forEach(snapshot => snapshot.forEach(doc => existingGames.add(doc.data().nomeJogo)));
             }
     
-   // Popula a lista na UI
+            // --- INÍCIO DA ALTERAÇÃO ---
+            const processedInThisBatch = new Set(); // Regista os jogos únicos deste lote
+            // --- FIM DA ALTERAÇÃO ---
+
+            // Popula a lista na UI
             list.innerHTML = '';
             gameCandidates.forEach((game, index) => {
                 let isInvalid = !game.isValid;
                 let invalidReason = game.invalidReason;
-                if (game.isValid && existingGames.has(game.nomeJogo)) {
-                    isInvalid = true;
-                    invalidReason = 'Jogo já existe.';
+
+                // Apenas faz validações de duplicados se o jogo for estruturalmente válido
+                if (game.isValid) {
+                    if (existingGames.has(game.nomeJogo)) {
+                        isInvalid = true;
+                        invalidReason = 'Jogo já existe no DB.';
+                    // --- INÍCIO DA ALTERAÇÃO ---
+                    } else if (processedInThisBatch.has(game.nomeJogo)) {
+                        // Se o jogo já foi processado neste lote, marca como inválido
+                        isInvalid = true;
+                        invalidReason = 'Duplicado nesta lista.';
+                    } else {
+                        // Se for a primeira vez, adiciona ao registo para deteção futura
+                        processedInThisBatch.add(game.nomeJogo);
+                    }
+                    // --- FIM DA ALTERAÇÃO ---
                 }
+
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'preview-item' + (isInvalid ? ' is-invalid' : '');
                 itemDiv.innerHTML = `<input type="checkbox" id="game-check-${index}" data-index="${index}" ${isInvalid ? 'disabled' : 'checked'}><label for="game-check-${index}">${game.nomeJogo}</label>${isInvalid ? `<span class="invalid-reason">${invalidReason}</span>` : ''}`;
@@ -540,6 +555,10 @@
             window.gameCandidates = gameCandidates;
             panel.style.display = 'block';
         }
+
+
+
+
 
          // FUNÇÃO NOVA: Gere o processo de resolução de ambiguidades
         function resolveNextAmbiguity(ambiguities, resolvedChoices, gameCandidates) {
