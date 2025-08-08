@@ -144,47 +144,153 @@
     border: 1px solid #ddd;
 }
 
+/* NOVO: Estilo para o botão de filtro ativo */
+.filter-btn.active {
+    background-color: #1877f2; /* Cor azul, igual ao filtro de destaque ativo */
+    color: #fff;
+    border-color: #1877f2;
+}
+
+  .menu-toggle-btn {
+    display: none;
+}
+/* Estilo do overlay, escondido por padrão */
+.page-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
 @media (max-width: 992px) {
-    /* 1. Esconde a barra lateral em telas menores */
+    /* 1. Transforma a sidebar em um menu off-canvas */
     .sidebar {
-        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    /* 2. Estilo do botão do menu */
+    .menu-toggle-btn {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        width: 30px;
+        height: 30px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 10;
+    }
+    .menu-toggle-btn span {
+        width: 30px;
+        height: 3px;
+        background: #1c1e21;
+        border-radius: 5px;
     }
 
-    /* 2. Ajusta o layout principal para não esperar pela sidebar */
-    .content-wrapper {
-        display: block; /* Remove o flex para que o conteúdo ocupe o espaço */
-    }
-
-    /* 3. Ajusta o cabeçalho para telas mobile */
+    /* 3. Reorganiza o cabeçalho com alinhamento perfeito */
     header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between; /* ESTA É A MUDANÇA PRINCIPAL */
+        align-items: center;
         padding: 10px 15px;
     }
-
-    /* Remove o 'espaçador' direito no header que só existe para a versão desktop */
-    header > div:last-child {
-        display: none;
+    
+    /* LINHA 1: Botão, Logo e Espaçador Invisível */
+    .menu-toggle-btn { order: 1; }
+    .logo-container {
+        order: 2;
+        /* Não precisamos de flex-grow ou text-align aqui, o pai faz o trabalho */
+    }
+    header::after {
+        content: '';
+        width: 30px; /* Mesma largura do .menu-toggle-btn para balancear */
+        order: 3;
     }
 
-    /* Centraliza e ajusta a barra de pesquisa global */
+    /* Esconde o 'espaçador' original do desktop */
+    header > div:last-child { display: none; }
+
+    /* LINHA 2: Barra de Pesquisa */
     #global-search-container {
-        margin: 0 10px;
-        max-width: none;
+        order: 4;
+        width: 100%;
+        margin-top: 15px;
     }
 
-    /* 4. Ajusta o padding do conteúdo principal */
-    .main-content {
-        padding: 15px;
-    }
 
-    /* Garante que a grade de destaques se ajuste bem */
+/* NOVO: Transforma os destaques em um carrossel horizontal */
     #latest-games-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        display: flex;                /* Muda o layout de grade para linha */
+        overflow-x: auto;             /* Permite o scroll horizontal */
+        overflow-y: hidden;           /* Esconde qualquer scroll vertical acidental */
+        flex-wrap: nowrap;            /* Impede que os itens quebrem para a linha de baixo */
+        -webkit-overflow-scrolling: touch; /* Melhora a fluidez do scroll no iOS */
+        padding-bottom: 20px;         /* Adiciona espaço para a barra de scroll não tampar o conteúdo */
     }
 
-    /* Melhora a barra de filtros na lista de jogos */
+    #latest-games-grid .game-card {
+        flex-shrink: 0;               /* Impede que os cards encolham para caber na tela */
+        width: 240px;                 /* Define uma largura fixa para cada card */
+    }
+
+
+/* NOVO: Transforma os botões de filtro em um carrossel horizontal */
+    #highlights-filter-container {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 15px; /* Espaço para a barra de scroll */
+    }
+
+    #highlights-filter-container .highlight-filter-btn {
+        flex-shrink: 0; /* Impede que os botões se espremam */
+    }
+
+    /* NOVO: Ajusta a barra de filtros dos jogos */
     #filter-bar {
-        flex-direction: column;
-        align-items: stretch; /* Faz os botões ocuparem a largura total */
+        position: static;      /* 1. Remove o comportamento "sticky" */
+        flex-direction: row;   /* Garante que o flexbox possa usar 'wrap' */
+        padding: 15px;         /* Ajusta o espaçamento interno */
+        border-radius: 0;
+        margin: -20px -20px 0 -20px; /* Mantém o alinhamento visual */
+    }
+
+    #search-input {
+        width: 100%;           /* 2. Força a barra de pesquisa a ocupar a primeira linha */
+    }
+
+    /* 3. Ajusta os botões para a segunda linha com fonte menor */
+    #filter-bar .filter-btn, #filter-bar #date-input {
+        font-size: 0.8rem;     /* Diminui a fonte */
+        padding: 8px 10px;     /* Reduz o padding para ficarem mais compactos */
+        flex-grow: 1;          /* Faz os botões dividirem o espaço da linha igualmente */
+        text-align: center;
+    }
+
+
+    /* 4. Estado "Aberto" do menu */
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+    body.sidebar-open .page-overlay {
+        opacity: 1;
+        visibility: visible;
     }
 }
 
@@ -193,6 +299,13 @@
 <body>
     <div class="page-container">
         <header>
+
+            <button id="menu-toggle-btn" class="menu-toggle-btn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
             <a href="index.html" class="logo-container">
                 <img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image">
                 <span class="logo-name">VARSOCCER</span>
@@ -209,6 +322,10 @@
                 <input type="text" id="sidebar-search-input" placeholder="Search competition...">
                 <div id="competition-list"><p class="loading-message">Loading...</p></div>
             </nav>
+
+             <!-- OVERLAY (ADICIONAR AQUI) -->
+            <div id="page-overlay" class="page-overlay"></div>
+
             <div class="main-content-scroll-container">
                 <main class="main-content">
                     <h2>Latest Highlights</h2>
@@ -450,6 +567,24 @@
             });
         }
         
+
+        function setupMobileMenu() {
+    const menuButton = document.getElementById('menu-toggle-btn');
+    const overlay = document.getElementById('page-overlay');
+    
+    if (menuButton) {
+        menuButton.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-open');
+        });
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            document.body.classList.remove('sidebar-open');
+        });
+    }
+}
+
         function renderLatestFive(games) {
             const grid = document.getElementById('latest-games-grid');
             if (!games || games.length === 0) { grid.innerHTML = '<p>No recent matches found for this filter.</p>'; return; }
@@ -529,28 +664,47 @@
     });
 }
         
-        function setupFilters(games) {
-            const searchInput = document.getElementById('search-input');
-            const [allBtn, yesterdayBtn, todayBtn] = [document.getElementById('all-btn'), document.getElementById('yesterday-btn'), document.getElementById('today-btn')];
-            const todayStr = new Date().toISOString().slice(0, 10);
-            const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().slice(0, 10);
-            todayBtn.textContent = `TODAY (${games.filter(g => g.dataJogo.startsWith(todayStr)).length})`;
-            yesterdayBtn.textContent = `YESTERDAY (${games.filter(g => g.dataJogo.startsWith(yesterdayStr)).length})`;
-            const applyFilter = () => {
-                const searchTerm = searchInput.value.toLowerCase();
-                const filteredGames = games.filter(g => {
-                    const home = clubsMap.get(g.equipaCasaId)?.nome.toLowerCase() || '';
-                    const away = clubsMap.get(g.equipaForaId)?.nome.toLowerCase() || '';
-                    return g.nomeJogo.toLowerCase().includes(searchTerm) || home.includes(searchTerm) || away.includes(searchTerm);
-                });
-                renderFullList(filteredGames);
-            };
-            searchInput.addEventListener('keyup', applyFilter);
-            allBtn.addEventListener('click', () => { searchInput.value = ''; renderFullList(games); });
-            todayBtn.addEventListener('click', () => { searchInput.value = ''; renderFullList(games.filter(g => g.dataJogo.startsWith(todayStr))); });
-            yesterdayBtn.addEventListener('click', () => { searchInput.value = ''; renderFullList(games.filter(g => g.dataJogo.startsWith(yesterdayStr))); });
+     function setupFilters(games) {
+    const searchInput = document.getElementById('search-input');
+    const filterBar = document.getElementById('filter-bar'); // Container dos botões
+    const allButtons = filterBar.querySelectorAll('.filter-btn'); // Pega todos os botões
+    const [allBtn, yesterdayBtn, todayBtn] = [document.getElementById('all-btn'), document.getElementById('yesterday-btn'), document.getElementById('today-btn')];
+    
+    // Deixa o botão "ALL" ativo por padrão ao carregar a página
+    allBtn.classList.add('active');
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+    todayBtn.textContent = `TODAY (${games.filter(g => g.dataJogo.startsWith(todayStr)).length})`;
+    yesterdayBtn.textContent = `YESTERDAY (${games.filter(g => g.dataJogo.startsWith(yesterdayStr)).length})`;
+
+    // Função para gerenciar a classe 'active'
+    const handleButtonClick = (clickedButton) => {
+        // 1. Remove a classe 'active' de TODOS os botões
+        allButtons.forEach(btn => btn.classList.remove('active'));
+        // 2. Adiciona a classe 'active' apenas no botão que foi clicado
+        clickedButton.classList.add('active');
+    };
+
+    const applyFilter = () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        const filteredGames = games.filter(g => {
+            const home = clubsMap.get(g.equipaCasaId)?.nome.toLowerCase() || '';
+            const away = clubsMap.get(g.equipaForaId)?.nome.toLowerCase() || '';
+            return g.nomeJogo.toLowerCase().includes(searchTerm) || home.includes(searchTerm) || away.includes(searchTerm);
+        });
+        renderFullList(filteredGames);
+        // Se houver texto na busca, remove o destaque de qualquer botão de data
+        if (searchTerm) {
+            allButtons.forEach(btn => btn.classList.remove('active'));
         }
+    };
+    searchInput.addEventListener('keyup', applyFilter);
+    allBtn.addEventListener('click', () => { handleButtonClick(allBtn); searchInput.value = ''; renderFullList(games); });
+    todayBtn.addEventListener('click', () => { handleButtonClick(todayBtn); searchInput.value = ''; renderFullList(games.filter(g => g.dataJogo.startsWith(todayStr))); });
+    yesterdayBtn.addEventListener('click', () => { handleButtonClick(yesterdayBtn); searchInput.value = ''; renderFullList(games.filter(g => g.dataJogo.startsWith(yesterdayStr))); });
+}
 
         // --- FUNÇÕES DA PESQUISA GLOBAL ---
         async function fetchLastGamesForTeam(teamId, limitNum = 3) {
@@ -723,6 +877,7 @@
     await refreshGameDataAndUpdateUI(); 
     setupGlobalSearch();
     await updateStatsFooter();
+    setupMobileMenu(); 
 
     // ADIÇÃO: Lógica para mostrar o rodapé com atraso
     setTimeout(() => {
