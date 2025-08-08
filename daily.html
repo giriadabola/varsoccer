@@ -21,34 +21,41 @@
         .game-list-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; border-radius: 4px; margin-bottom: 4px; border: 1px solid transparent; transition: background-color 0.2s, border-color 0.2s; }
         .game-list-item:hover { background-color: #f0f2f5; }
         .game-list-item.active { background-color: #007bff; color: white; font-weight: bold; border-color: #0056b3; }
+        
+     .country-header {
+            font-weight: bold;
+            color: #444;
+            background-color: #f7f7f7;
+            padding: 8px 12px;
+            margin-top: 10px;
+            border-top: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+            border-radius: 4px;
+            /* **MODIFICADO** - Adicionado para alinhar bandeira e texto */
+            display: flex; 
+            align-items: center; 
+        }
+        .country-header:first-child { margin-top: 0; }
+
+        /* **NOVO** Estilo para a bandeira do país */
+        .country-flag {
+            height: 16px; /* Altura controlada */
+            width: auto;
+            margin-right: 8px; /* Espaçamento à direita */
+            border-radius: 2px;
+            object-fit: contain;
+        }
+
         .status-indicator { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
         .status-green { background-color: #28a745; }
         .status-red { background-color: #dc3545; }
         .loading-message, .info-message { color: #888; padding: 10px; }
         .edit-panel-column { flex: 1.5; }
 
-        /* **NOVO** Estilos para o cabeçalho do painel com logotipos */
-        .panel-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px; /* Mantém o espaçamento que o h2 tinha */
-        }
-        .panel-header h2 {
-            margin: 0; /* Remove margem padrão do h2 */
-            flex-shrink: 0; /* Impede que o texto encolha */
-        }
-        .logo-container {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        .logo-container img {
-            height: 32px; /* Altura controlada para os logotipos */
-            width: auto;
-            object-fit: contain;
-            display: none; /* Escondido por defeito, JS irá mostrar */
-        }
+        .panel-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .panel-header h2 { margin: 0; flex-shrink: 0; }
+        .logo-container { display: flex; gap: 8px; align-items: center; }
+        .logo-container img { height: 32px; width: auto; object-fit: contain; display: none; }
         
         #editForm fieldset { border: 1px solid #ddd; padding: 15px; border-radius: 4px; }
         #editForm fieldset:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -68,18 +75,46 @@
         .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
         .checkbox-group input { width: auto; }
         .checkbox-group label { margin-bottom: 0; font-weight: normal; }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+.modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; border-radius: 8px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; }
+.modal-header h2 { margin: 0; }
+.close-btn { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+
+.channel-link-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.channel-link-list li a {
+    display: block;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: #007bff;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+    word-break: break-all;
+}
+.channel-link-list li a:hover {
+    background-color: #f0f2f5;
+}
+.channel-link-list .no-channels-message {
+    padding: 15px;
+    color: #888;
+    text-align: center;
+}
+
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Jogos Diários</h1>
         <div class="editor-main">
-            <!-- Coluna de Navegação (sem alterações) -->
             <div class="navigation-column">
-                <div>
-                    <label for="seasonSelector">Temporada</label>
-                    <select id="seasonSelector"><option>A carregar...</option></select>
-                </div>
+                <div><label for="seasonSelector">Temporada</label><select id="seasonSelector"><option>A carregar...</option></select></div>
                 <div class="filter-group">
                     <div><label for="monthSelector">Mês</label><select id="monthSelector"></select></div>
                     <div><label for="daySelector">Dia</label><select id="daySelector"></select></div>
@@ -87,42 +122,25 @@
                 <div class="nav-header"><h2>Jogos Encontrados</h2></div>
                 <div class="list-container"><ul id="gamesList" class="nav-list"></ul></div>
             </div>
-            <!-- Painel de Edição -->
             <div class="edit-panel-column">
-                <!-- **HTML MODIFICADO**: O h2 foi envolvido para permitir o alinhamento com os logotipos -->
                 <div class="panel-header">
                     <h2>Painel de Edição</h2>
                     <div class="logo-container">
-                        <img id="logoCasa" src="" alt="Logo Equipa Casa">
-                        <img id="logoFora" src="" alt="Logo Equipa Visitante">
+                        <img id="logoCasa" src="" alt="Logo Equipa Casa"><img id="logoFora" src="" alt="Logo Equipa Visitante">
                     </div>
                 </div>
                 <form id="editForm">
                     <fieldset id="editFieldset" disabled>
-                        <div class="form-group">
-                            <label>Jogo Selecionado:</label>
-                            <div id="gameNameDisplay">Selecione um jogo da lista</div>
-                        </div>
+                        <div class="form-group"><label>Jogo Selecionado:</label><div id="gameNameDisplay">Selecione um jogo da lista</div></div>
                         <div class="score-inputs">
-                            <div class="form-group">
-                                <label for="resultadoCasaInput">Resultado Casa</label>
-                                <input type="number" id="resultadoCasaInput" min="0" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="resultadoForaInput">Resultado Fora</label>
-                                <input type="number" id="resultadoForaInput" min="0" required>
-                            </div>
+                            <div class="form-group"><label for="resultadoCasaInput">Resultado Casa</label><input type="number" id="resultadoCasaInput" min="0" required></div>
+                            <div class="form-group"><label for="resultadoForaInput">Resultado Fora</label><input type="number" id="resultadoForaInput" min="0" required></div>
                         </div>
-                        <div class="form-group">
-                            <label for="videoUrlInput">Link do Vídeo (YouTube, etc.)</label>
-                            <input type="url" id="videoUrlInput" placeholder="https://exemplo.com/video">
-                        </div>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="useLinkOnlyCheckbox">
-                            <label for="useLinkOnlyCheckbox">Usar apenas link (não incorporar)</label>
-                        </div>
+                        <div class="form-group"><label for="videoUrlInput">Link do Vídeo (YouTube, etc.)</label><input type="url" id="videoUrlInput" placeholder="https://exemplo.com/video"></div>
+                        <div class="checkbox-group"><input type="checkbox" id="useLinkOnlyCheckbox"><label for="useLinkOnlyCheckbox">Usar apenas link (não incorporar)</label></div>
                         <div class="button-group">
                             <button type="button" id="searchYouTubeBtn" class="action-btn search-btn">Procurar</button>
+                            <button type="button" id="channelsBtn" class="action-btn" style="background-color: #17a2b8;" disabled>Channels</button>
                             <button type="submit" id="saveBtn" class="action-btn save-btn">Gravar Alterações</button>
                         </div>
                         <div id="videoPreviewContainer">Pré-visualização do vídeo</div>
@@ -132,8 +150,28 @@
         </div>
     </div>
 
+<div id="channelsLinkModal" class="modal" style="display: none; z-index: 1001;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>Canais de Transmissão</h2>
+            <span id="closeChannelsLinkBtn" class="close-btn" style="cursor: pointer;">×</span>
+        </div>
+        <div class="channel-list-container">
+            <ul id="channelsLinkList" class="channel-link-list">
+                <!-- Links serão inseridos aqui -->
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
 <script type="module">
-    // **JS MODIFICADO**: Adicionado "getDoc" ao import
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
     import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
     
@@ -158,29 +196,59 @@
     const useLinkOnlyCheckbox = document.getElementById('useLinkOnlyCheckbox');
     const logoCasaImg = document.getElementById('logoCasa');
     const logoForaImg = document.getElementById('logoFora');
+     const channelsBtn = document.getElementById('channelsBtn');
+    const channelsLinkModal = document.getElementById('channelsLinkModal');
+    const closeChannelsLinkBtn = document.getElementById('closeChannelsLinkBtn');
+    const channelsLinkList = document.getElementById('channelsLinkList');
 
     // --- Estado da Aplicação ---
-    let allGamesFromDb = []; 
+   let allGamesFromDb = []; 
     let filteredGames = [];
     let selectedGame = null;
-    
+    // **MODIFICADO** - O mapa agora armazena um objeto para cada país
+    let paisesMap = new Map(); 
+    let competicoesMap = new Map();
+
     // --- Funções Auxiliares ---
     
     const getLogoUrl = async (teamId) => {
         if (!teamId) return null;
         try {
-            // ***** ALTERAÇÃO PRINCIPAL AQUI *****
-            // O nome da coleção foi corrigido de 'equipas' para 'clubes'.
             const teamRef = doc(db, 'clubes', teamId);
             const teamSnap = await getDoc(teamRef);
-            if (teamSnap.exists() && teamSnap.data().logoUrl) {
-                return teamSnap.data().logoUrl;
-            }
-            console.log(`Logo não encontrado para a equipa ${teamId} na coleção 'clubes'.`);
+            if (teamSnap.exists() && teamSnap.data().logoUrl) return teamSnap.data().logoUrl;
             return null;
         } catch (error) {
             console.error(`Erro ao buscar logo para equipa ${teamId}:`, error);
             return null;
+        }
+    };
+
+    // **NOVO** Função para carregar dados das competições
+   const loadCompeticoes = async () => {
+        try {
+            const competicoesSnapshot = await getDocs(collection(db, "competicoes"));
+            competicoesSnapshot.forEach(doc => {
+                competicoesMap.set(doc.id, doc.data()); // Armazena o objeto completo
+            });
+        } catch (error) {
+            console.error("Falha ao carregar competições:", error);
+        }
+    };
+
+  const loadPaises = async () => {
+        try {
+            const paisesSnapshot = await getDocs(collection(db, "paises"));
+            paisesSnapshot.forEach(doc => {
+                const data = doc.data();
+                // Armazena um objeto com nome e bandeiraUrl, em vez de apenas o nome
+                paisesMap.set(doc.id, { 
+                    nome: data.nome, 
+                    bandeiraUrl: data.bandeiraUrl 
+                });
+            });
+        } catch (error) {
+            console.error("Falha ao carregar países:", error);
         }
     };
 
@@ -240,10 +308,9 @@
         const snapshot = await getDocs(seasonsQuery);
         const optionsHtml = snapshot.docs.map(doc => `<option value="${doc.data().nome}">${doc.data().nome}</option>`).join('');
         seasonSelector.innerHTML = '<option value="all">Todas as Temporadas</option>' + optionsHtml;
-        if (!snapshot.empty) {
-            seasonSelector.value = snapshot.docs[0].data().nome;
-        }
+        if (!snapshot.empty) seasonSelector.value = snapshot.docs[0].data().nome;
     };
+
     const formatGameDate = (dateString) => {
         if (!dateString || typeof dateString !== 'string') return '';
         const dateParts = dateString.split('-'); 
@@ -254,10 +321,7 @@
     const clearEditPanel = () => {
         editFieldset.disabled = true;
         gameNameDisplay.textContent = 'Selecione um jogo da lista';
-        resultadoCasaInput.value = '';
-        resultadoForaInput.value = '';
-        videoUrlInput.value = '';
-        useLinkOnlyCheckbox.checked = false;
+        editForm.reset();
         videoPreviewContainer.innerHTML = 'Pré-visualização do vídeo';
         selectedGame = null;
         logoCasaImg.style.display = 'none';
@@ -284,22 +348,60 @@
         renderGamesList();
     };
 
-    const renderGamesList = () => {
-        clearEditPanel(); 
+    // **MODIFICADO** - Lógica de renderização usa o novo mapeamento
+   const renderGamesList = () => {
+        clearEditPanel();
         if (filteredGames.length === 0) {
             gamesList.innerHTML = '<li class="info-message">Nenhum jogo encontrado.</li>';
             return;
         }
-        gamesList.innerHTML = filteredGames.map(game => {
-            const hasVideo = game.videoUrl && game.videoUrl.trim() !== '';
-            const statusClass = hasVideo ? 'status-green' : 'status-red';
-            return `
-                <li class="game-list-item" data-id="${game.id}">
-                    <span class="status-indicator ${statusClass}"></span>
-                    <span>${game.nomeJogo || 'Jogo sem nome'}</span>
-                </li>
-            `;
-        }).join('');
+
+        // Agrupa os jogos pelo ID do país para facilitar a busca de dados
+        const gamesByPaisId = {};
+        filteredGames.forEach(game => {
+            const competicaoId = game.competicaoId;
+             const paisId = competicoesMap.get(competicaoId)?.paisId || 'unknown';
+            
+            if (!gamesByPaisId[paisId]) {
+                gamesByPaisId[paisId] = [];
+            }
+            gamesByPaisId[paisId].push(game);
+        });
+
+        // Ordena a lista de países pelo nome, não pelo ID
+        const sortedPaisIds = Object.keys(gamesByPaisId).sort((a, b) => {
+            const nameA = paisesMap.has(a) ? paisesMap.get(a).nome : 'País Desconhecido';
+            const nameB = paisesMap.has(b) ? paisesMap.get(b).nome : 'País Desconhecido';
+            return nameA.localeCompare(nameB);
+        });
+
+        let listHtml = '';
+        sortedPaisIds.forEach(paisId => {
+            const countryData = paisesMap.get(paisId);
+            const countryName = countryData ? countryData.nome : 'País Desconhecido';
+            const flagUrl = countryData ? countryData.bandeiraUrl : null;
+
+            // Cria a tag da imagem apenas se a URL da bandeira existir
+            const flagHtml = flagUrl 
+                ? `<img src="${flagUrl}" alt="Bandeira de ${countryName}" class="country-flag">` 
+                : '';
+            
+            // Adiciona o cabeçalho do país com a bandeira
+            listHtml += `<li class="country-header">${flagHtml}<span>${countryName}</span></li>`;
+            
+            // Adiciona os jogos do país
+            const gamesInCountry = gamesByPaisId[paisId];
+            gamesInCountry.forEach(game => {
+                const hasVideo = game.videoUrl && game.videoUrl.trim() !== '';
+                const statusClass = hasVideo ? 'status-green' : 'status-red';
+                listHtml += `
+                    <li class="game-list-item" data-id="${game.id}">
+                        <span class="status-indicator ${statusClass}"></span>
+                        <span>${game.nomeJogo || 'Jogo sem nome'}</span>
+                    </li>`;
+            });
+        });
+        gamesList.innerHTML = listHtml;
     };
     
     const selectGame = async (gameId) => {
@@ -308,6 +410,18 @@
         document.querySelectorAll('#gamesList .active').forEach(el => el.classList.remove('active'));
         document.querySelector(`#gamesList li[data-id="${gameId}"]`).classList.add('active');
         editFieldset.disabled = false;
+        channelsBtn.disabled = true; 
+
+if (selectedGame.competicaoId) {
+        const competicao = competicoesMap.get(selectedGame.competicaoId);
+        if (competicao && Array.isArray(competicao.channels) && competicao.channels.length > 0) {
+            channelsBtn.disabled = false;
+        }
+    }
+
+
+
+
         resultadoCasaInput.value = selectedGame.resultadoCasa ?? '';
         resultadoForaInput.value = selectedGame.resultadoFora ?? '';
         videoUrlInput.value = selectedGame.videoUrl || '';
@@ -320,14 +434,8 @@
             getLogoUrl(selectedGame.equipaCasaId),
             getLogoUrl(selectedGame.equipaForaId)
         ]);
-        if (logoCasaUrl) {
-            logoCasaImg.src = logoCasaUrl;
-            logoCasaImg.style.display = 'block';
-        }
-        if (logoForaUrl) {
-            logoForaImg.src = logoForaUrl;
-            logoForaImg.style.display = 'block';
-        }
+        if (logoCasaUrl) { logoCasaImg.src = logoCasaUrl; logoCasaImg.style.display = 'block'; }
+        if (logoForaUrl) { logoForaImg.src = logoForaUrl; logoForaImg.style.display = 'block'; }
     };
     
     const updateGeneratedFields = () => {
@@ -339,16 +447,13 @@
     };
 
     const renderVideoPreview = (url) => {
-        if (!url || !url.trim()) {
-            videoPreviewContainer.innerHTML = 'Pré-visualização do vídeo';
-            return;
-        }
-        let videoId = null;
+        videoPreviewContainer.innerHTML = 'Pré-visualização do vídeo';
+        if (!url || !url.trim()) return;
+        
         const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
         const match = url.match(youtubeRegex);
-        if (match && match[1]) videoId = match[1];
-        if (videoId) {
-            videoPreviewContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        if (match && match[1]) {
+            videoPreviewContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${match[1]}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
         } else {
             videoPreviewContainer.innerHTML = 'Link não suportado ou inválido para pré-visualização.';
         }
@@ -357,10 +462,8 @@
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedGame || saveBtn.disabled) return;
-        const originalBtnText = saveBtn.textContent;
         saveBtn.disabled = true;
         saveBtn.textContent = 'A gravar...';
-        const dataFormatada = formatGameDate(selectedGame.dataJogo);
         const casa = resultadoCasaInput.value;
         const fora = resultadoForaInput.value;
         const updatedData = {
@@ -368,33 +471,32 @@
             resultadoFora: fora,
             videoUrl: videoUrlInput.value.trim(),
             resultadoFinal: `${casa}-${fora}`,
-            nomeJogo: `${selectedGame.equipaCasaNome} ${casa}-${fora} ${selectedGame.equipaForaNome} - ${dataFormatada}`,
+            nomeJogo: `${selectedGame.equipaCasaNome} ${casa}-${fora} ${selectedGame.equipaForaNome} - ${formatGameDate(selectedGame.dataJogo)}`,
             apiYt: useLinkOnlyCheckbox.checked
         };
         try {
             await updateDoc(doc(db, 'jogos', selectedGame.id), updatedData);
-            const gameIndexInDb = allGamesFromDb.findIndex(g => g.id === selectedGame.id);
-            if (gameIndexInDb > -1) allGamesFromDb[gameIndexInDb] = { ...allGamesFromDb[gameIndexInDb], ...updatedData };
-            const gameIndexInFiltered = filteredGames.findIndex(g => g.id === selectedGame.id);
-            if (gameIndexInFiltered > -1) filteredGames[gameIndexInFiltered] = { ...filteredGames[gameIndexInFiltered], ...updatedData };
-            selectedGame = { ...selectedGame, ...updatedData };
+            Object.assign(allGamesFromDb.find(g => g.id === selectedGame.id), updatedData);
+            Object.assign(filteredGames.find(g => g.id === selectedGame.id), updatedData);
+            Object.assign(selectedGame, updatedData);
+            
             const listItem = document.querySelector(`#gamesList li[data-id="${selectedGame.id}"]`);
-            if(listItem) {
-                const hasVideo = updatedData.videoUrl && updatedData.videoUrl.trim() !== '';
-                const statusIndicator = listItem.querySelector('.status-indicator');
-                statusIndicator.className = `status-indicator ${hasVideo ? 'status-green' : 'status-red'}`;
+            if (listItem) {
+                const indicator = listItem.querySelector('.status-indicator');
+                indicator.className = `status-indicator ${updatedData.videoUrl ? 'status-green' : 'status-red'}`;
                 listItem.querySelector('span:last-child').textContent = updatedData.nomeJogo;
             }
+            
             saveBtn.textContent = 'Gravado!';
             saveBtn.style.backgroundColor = '#218838';
             updateDaySelectorWithCounts();
         } catch (error) {
             console.error("Erro ao gravar alterações: ", error);
             alert("Ocorreu um erro ao gravar. Tente novamente.");
-            saveBtn.textContent = originalBtnText;
+            saveBtn.textContent = 'Gravar Alterações';
         } finally {
             setTimeout(() => {
-                saveBtn.textContent = originalBtnText;
+                saveBtn.textContent = 'Gravar Alterações';
                 saveBtn.style.backgroundColor = '#28a745';
                 saveBtn.disabled = false;
             }, 2000);
@@ -403,36 +505,60 @@
     
     searchYouTubeBtn.addEventListener('click', () => {
         if (!selectedGame) return;
-        const gameNameWithDate = gameNameDisplay.textContent;
-        const searchTerm = `${gameNameWithDate} highlights`;
+        const searchTerm = `${gameNameDisplay.textContent} highlights`;
         const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
         window.open(youtubeUrl, '_blank');
     });
 
-    // --- Event Listeners ---
-    seasonSelector.addEventListener('change', () => {
-        updateDaySelectorWithCounts();
-        applyFiltersAndRender();
-    });
-    monthSelector.addEventListener('change', () => {
-        updateDaySelectorWithCounts();
-        applyFiltersAndRender();
-    });
-    daySelector.addEventListener('change', applyFiltersAndRender);
-    
-    gamesList.addEventListener('click', async (e) => {
-        const li = e.target.closest('.game-list-item');
-        if (li) await selectGame(li.dataset.id);
+
+ channelsBtn.addEventListener('click', () => {
+        if (!selectedGame || !selectedGame.competicaoId) return;
+
+        channelsLinkList.innerHTML = ''; // Limpa a lista anterior
+        const competicao = competicoesMap.get(selectedGame.competicaoId);
+
+        if (competicao && Array.isArray(competicao.channels) && competicao.channels.length > 0) {
+            competicao.channels.forEach(link => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = link;
+                a.target = '_blank'; // Abre em nova aba
+                a.textContent = link;
+                li.appendChild(a);
+                channelsLinkList.appendChild(li);
+            });
+        } else {
+            channelsLinkList.innerHTML = '<li class="no-channels-message">Nenhum canal de transmissão encontrado para esta competição.</li>';
+        }
+
+        channelsLinkModal.style.display = 'block';
     });
 
-    resultadoCasaInput.addEventListener('input', updateGeneratedFields);
-    resultadoForaInput.addEventListener('input', updateGeneratedFields);
+    closeChannelsLinkBtn.addEventListener('click', () => {
+        channelsLinkModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target == channelsLinkModal) {
+            channelsLinkModal.style.display = 'none';
+        }
+    });
+
+
+    // --- Event Listeners ---
+    seasonSelector.addEventListener('change', () => { updateDaySelectorWithCounts(); applyFiltersAndRender(); });
+    monthSelector.addEventListener('change', () => { updateDaySelectorWithCounts(); applyFiltersAndRender(); });
+    daySelector.addEventListener('change', applyFiltersAndRender);
+    gamesList.addEventListener('click', async (e) => { const li = e.target.closest('.game-list-item'); if (li) await selectGame(li.dataset.id); });
+    [resultadoCasaInput, resultadoForaInput].forEach(el => el.addEventListener('input', updateGeneratedFields));
     videoUrlInput.addEventListener('input', (e) => renderVideoPreview(e.target.value));
 
     // --- Inicialização ---
     document.addEventListener('DOMContentLoaded', async () => {
         try {
-            await loadAllGames();
+            // **MODIFICADO** Carrega todos os dados necessários em paralelo
+            await Promise.all([loadAllGames(), loadPaises(), loadCompeticoes()]);
+            
             initializeMonthSelector();
             await loadSeasonsAndSetDefault();
             updateDaySelectorWithCounts();
