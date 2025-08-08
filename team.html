@@ -65,11 +65,123 @@
         .related-link:hover { background-color: #f0f2f5; cursor: pointer; }
         .related-logo { width: 32px; height: 32px; object-fit: contain; margin-right: 12px; }
         .related-name { font-weight: 500; }
+
+        .menu-toggle-btn {
+    display: none;
+}
+/* Estilo do overlay, escondido por padrão */
+.page-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+@media (max-width: 992px) {
+    /* Transforma a sidebar em um menu off-canvas */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    /* Estilo do botão do menu */
+    .menu-toggle-btn {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        width: 30px;
+        height: 30px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 10;
+    }
+    .menu-toggle-btn span {
+        width: 30px;
+        height: 3px;
+        background: #1c1e21;
+        border-radius: 5px;
+    }
+
+    /* Reorganiza o cabeçalho com alinhamento perfeito */
+    header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+    }
+    
+    .menu-toggle-btn { order: 1; }
+    .logo-container { order: 2; }
+    header::after {
+        content: '';
+        width: 30px;
+        order: 3;
+    }
+
+    /* Oculta o conteúdo principal quando o menu está aberto */
+    body.sidebar-open .content-wrapper {
+        overflow: hidden;
+    }
+
+    /* Estado "Aberto" do menu */
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+    body.sidebar-open .page-overlay {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Ajustes específicos para o conteúdo desta página */
+    #team-header {
+        flex-direction: column;
+        align-items: flex-start; /* Alinha à esquerda */
+        gap: 15px;
+    }
+    #team-name {
+        font-size: 1.8rem; /* Reduz a fonte do nome da equipa */
+    }
+    #competition-filters {
+        flex-wrap: nowrap; /* Transforma em carrossel */
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+    .filter-pill {
+        flex-shrink: 0; /* Impede que os botões encolham */
+    }
+    .game-item {
+        grid-template-columns: 32px 1fr; /* Simplifica a grade para mobile */
+    }
+    .game-jornada {
+        display: none; /* Opcional: esconde a jornada para economizar espaço */
+    }
+}
+
     </style>
 </head>
 <body>
     <div class="page-container">
         <header>
+             <button id="menu-toggle-btn" class="menu-toggle-btn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <a href="index.html" class="logo-container">
                 <img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image">
                 <span class="logo-name">VARSOCCER</span>
@@ -79,10 +191,11 @@
             <nav class="sidebar">
                 <div id="sidebar-content"></div>
             </nav>
+             <div id="page-overlay" class="page-overlay"></div>
             <main class="main-content">
-                <div id="team-header"><p class="loading-message">A carregar equipa...</p></div>
+                <div id="team-header"><p class="loading-message">Loading team...</p></div>
                 <div id="competition-filters"></div>
-                <div id="games-list-container"><p class="loading-message">Selecione uma temporada para ver os jogos.</p></div>
+                <div id="games-list-container"><p class="loading-message">Select a season to view the matches.</p></div>
             </main>
         </div>
     </div>
@@ -164,7 +277,7 @@
                 });
 
                 if (allGamesOfSeason.length === 0) {
-                    gamesContainer.innerHTML = '<p>Nenhum jogo encontrado para esta temporada ou os jogos futuros ainda não têm resultado.</p>';
+                    gamesContainer.innerHTML = '<p>No matches found for this season, or upcoming matches do not have results yet.</p>';
                     renderSidebarCompetitions([]);
                     return;
                 }
@@ -228,7 +341,7 @@
             renderSidebarHeader();
             const compSection = document.createElement('div');
             if (games.length === 0) {
-                compSection.innerHTML = '<h2>See more goals from:</h2><p>Nenhuma competição encontrada.</p>';
+                compSection.innerHTML = '<h2>See more goals from:</h2><p>No competition found.</p>';
             } else {
                 const uniqueCompetitionIds = [...new Set(games.map(game => game.competicaoId))];
                 compSection.innerHTML = '<h2>See more goals from:</h2>';
@@ -255,25 +368,49 @@
             await fetchAndDisplayGamesForSeason(teamId, dropdown.value);
         };
 
-        async function initializePage() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const teamId = urlParams.get('id');
-            if (!teamId) {
-                document.querySelector('.main-content').innerHTML = '<h1>ID da equipa não fornecido na URL.</h1>';
-                return;
-            }
-            renderSidebarHeader();
-            await Promise.all([fetchAndStoreClubs(), fetchAndStoreCompetitions()]);
-            const teamDocSnap = await getDoc(doc(db, 'clubes', teamId));
-            if (teamDocSnap.exists()) {
-                renderTeamHeader(teamDocSnap.data());
-                await renderSeasonsDropdown(teamId);
-            } else {
-                document.querySelector('.main-content').innerHTML = '<h1>Equipa não encontrada.</h1>';
-            }
-        }
 
-        initializePage();
+        function setupMobileMenu() {
+    const menuButton = document.getElementById('menu-toggle-btn');
+    const overlay = document.getElementById('page-overlay');
+    
+    if (menuButton) {
+        menuButton.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-open');
+        });
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            document.body.classList.remove('sidebar-open');
+        });
+    }
+}
+
+// ... todo o seu código JS existente ...
+
+async function initializePage() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const teamId = urlParams.get('id');
+    if (!teamId) {
+        document.querySelector('.main-content').innerHTML = '<h1>ID da equipa não fornecido na URL.</h1>';
+        return;
+    }
+    renderSidebarHeader();
+    await Promise.all([fetchAndStoreClubs(), fetchAndStoreCompetitions()]);
+    const teamDocSnap = await getDoc(doc(db, 'clubes', teamId));
+    if (teamDocSnap.exists()) {
+        renderTeamHeader(teamDocSnap.data());
+        await renderSeasonsDropdown(teamId);
+        
+        // CHAME A FUNÇÃO DO MENU AQUI, NO FINAL
+        setupMobileMenu();
+
+    } else {
+        document.querySelector('.main-content').innerHTML = '<h1>Equipa não encontrada.</h1>';
+    }
+}
+initializePage();
+
     </script>
 </body>
 </html>
