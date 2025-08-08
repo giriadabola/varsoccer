@@ -129,15 +129,42 @@
 </head>
 <body>
     <div class="page-container">
-
         <header>
             <button id="menu-toggle-btn" class="menu-toggle-btn">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
-            
-            <a href="index.html" class="logo-container"><img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image"><span class="logo-name">VARSOCCER</span></a></header><div class="content-wrapper"><nav class="sidebar"><div id="sidebar-content"><p class="loading-message">Loading...</p><div id="page-overlay" class="page-overlay"></div></div></nav><main class="main-content"><div class="game-content-wrapper"><section id="video-section"><h1 id="game-title"><p class="loading-message">Loading details...</p></h1><div id="video-container"><p class="loading-message">Loading vídeo...</p></div><div id="jornada-picker-section"></div></section><aside id="related-games-section"><h2>In this round</h2><div id="related-games-list"><p class="loading-message">Loading matches...</p></div></aside></div></main></div>
+            <a href="index.html" class="logo-container">
+                <img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image">
+                <span class="logo-name">VARSOCCER</span>
+            </a>
+        </header>
+        
+        <div class="content-wrapper">
+            <nav class="sidebar">
+                <div id="sidebar-content">
+                    <p class="loading-message">Loading...</p>
+                </div>
+            </nav>
+
+            <!-- POSIÇÃO CORRETA DO OVERLAY -->
+            <div id="page-overlay" class="page-overlay"></div>
+
+            <main class="main-content">
+                <div class="game-content-wrapper">
+                    <section id="video-section">
+                        <h1 id="game-title"><p class="loading-message">Loading details...</p></h1>
+                        <div id="video-container"><p class="loading-message">Loading vídeo...</p></div>
+                        <div id="jornada-picker-section"></div>
+                    </section>
+                    <aside id="related-games-section">
+                        <h2>In this round</h2>
+                        <div id="related-games-list"><p class="loading-message">Loading matches...</p></div>
+                    </aside>
+                </div>
+            </main>
+        </div>
     </div>
     
     <script type="module">
