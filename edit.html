@@ -71,6 +71,33 @@
     font-weight: bold;
 }
 
+  .channel-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .channel-input-group input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 0.95em;
+        }
+        .channel-input-group .remove-channel-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .channel-input-group .remove-channel-btn:hover {
+            background-color: #c82333;
+        }
+
     </style>
 </head>
 
@@ -205,11 +232,12 @@
                     <div class="form-group"> <label for="competicaoNamming">Namming:</label> <input type="text" id="competicaoNamming" name="namming"> </div>
                     <div class="form-group"> <label for="competicaoLogoUrl">Link para logo (URL):</label> <input type="url" id="competicaoLogoUrl" name="logoUrl"> </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group"> <label for="competicaoNoMenu">Aparece no Menu?</label> <select id="competicaoNoMenu" name="noMenu"><option value="No">Não</option><option value="Yes">Sim</option></select> </div>
-                    <div class="form-group"> <label for="competicaoNoTopoMenu">Aparece no Topo?</label> <select id="competicaoNoTopoMenu" name="noTopoMenu"><option value="No">Não</option><option value="Yes">Sim</option></select> </div>
-                    <div class="form-group"> <label for="competicaoPosicaoMenu">Posição no Menu</label> <input type="number" id="competicaoPosicaoMenu" name="posicaoMenu" min="1"> </div>
-                </div>
+                   <div class="form-row" style="align-items: flex-end;">
+            <div class="form-group" style="flex: 0.7;"> <label for="competicaoNoMenu">No Menu?</label> <select id="competicaoNoMenu" name="noMenu"><option value="No">Não</option><option value="Yes">Sim</option></select> </div>
+            <div class="form-group" style="flex: 0.7;"> <label for="competicaoNoTopoMenu">No Topo?</label> <select id="competicaoNoTopoMenu" name="noTopoMenu"><option value="No">Não</option><option value="Yes">Sim</option></select> </div>
+            <div class="form-group" style="flex: 0.5;"> <label for="competicaoPosicaoMenu">Posição</label> <input type="number" id="competicaoPosicaoMenu" name="posicaoMenu" min="1"> </div>
+            <div class="form-group" style="flex: 1;"> <button type="button" id="addChannelsBtn" class="save-btn" style="width:100%; background-color: #17a2b8;">Gerir Canais</button> </div>
+        </div>
                 <button type="submit" class="save-btn">Salvar Alterações</button>
             </fieldset></form>
         </div>
@@ -234,6 +262,24 @@
             </fieldset></form>
         </div>
     </div>
+
+ <div id="channelsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Gerir Canais de Transmissão</h2>
+                <span id="closeChannelsBtn" class="close-btn">×</span>
+            </div>
+            
+            <div id="channelsListContainer" class="settings-panel">
+                <!-- Os inputs dos canais serão inseridos aqui via JS -->
+            </div>
+
+            <button id="addNewChannelBtn" class="save-btn" style="background-color: #28a745; margin-bottom: 15px;">Adicionar Novo Canal</button>
+            <button id="saveChannelsBtn" class="save-btn">Salvar Canais</button>
+        </div>
+    </div>
+
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
@@ -370,15 +416,24 @@
         const saveSettingsBtn = document.getElementById('saveSettingsBtn');
         const menuOrderList = document.getElementById('menuOrderList');
         const topMenuList = document.getElementById('topMenuList');
+        const channelsModal = document.getElementById('channelsModal');
+        const closeChannelsBtn = document.getElementById('closeChannelsBtn');
+        const saveChannelsBtn = document.getElementById('saveChannelsBtn');
+        const channelsListContainer = document.getElementById('channelsListContainer');
+        const addNewChannelBtn = document.getElementById('addNewChannelBtn');
+        const addChannelsBtn = document.getElementById('addChannelsBtn');
 
         openSettingsBtn.onclick = () => {
             populateSettingsModal();
             settingsModal.style.display = 'block';
         };
         closeSettingsBtn.onclick = () => settingsModal.style.display = 'none';
-        window.onclick = (event) => {
+      window.onclick = (event) => {
             if (event.target == settingsModal) {
                 settingsModal.style.display = 'none';
+            }
+            if (event.target == channelsModal) {
+                channelsModal.style.display = 'none';
             }
         };
 
@@ -596,6 +651,65 @@
         nomeJogoEl.value = `${casaItem.nome} ${resFinal} ${foraItem.nome}`;
     }
 }
+
+ function createChannelInput(link = '') {
+            const div = document.createElement('div');
+            div.className = 'channel-input-group';
+            div.innerHTML = `
+                <input type="url" class="channel-link-input" placeholder="https://exemplo.com/stream" value="${link}">
+                <button type="button" class="remove-channel-btn">Remover</button>
+            `;
+            div.querySelector('.remove-channel-btn').addEventListener('click', () => {
+                div.remove();
+            });
+            channelsListContainer.appendChild(div);
+        }
+
+        addChannelsBtn.addEventListener('click', () => {
+            if (!currentlyEditing.competicoes) {
+                alert("Por favor, selecione uma competição primeiro para gerir os canais.");
+                return;
+            }
+            channelsListContainer.innerHTML = '';
+            
+            const competicao = allData.competicoes.find(c => c.id === currentlyEditing.competicoes);
+            if (competicao && Array.isArray(competicao.channels) && competicao.channels.length > 0) {
+                competicao.channels.forEach(link => createChannelInput(link));
+            } else {
+                createChannelInput(); // Adiciona um campo em branco para começar
+            }
+            channelsModal.style.display = 'block';
+        });
+
+        closeChannelsBtn.addEventListener('click', () => {
+            channelsModal.style.display = 'none';
+        });
+        
+        addNewChannelBtn.addEventListener('click', () => createChannelInput());
+
+        saveChannelsBtn.addEventListener('click', async () => {
+            const id = currentlyEditing.competicoes;
+            if (!id) return;
+
+            const inputs = channelsListContainer.querySelectorAll('.channel-link-input');
+            const channels = Array.from(inputs)
+                .map(input => input.value.trim())
+                .filter(link => link !== ''); // Remove links vazios
+
+            try {
+                const docRef = doc(db, 'competicoes', id);
+                await updateDoc(docRef, { channels: channels });
+                
+                alert('Canais salvos com sucesso!');
+                channelsModal.style.display = 'none';
+                await fetchAllInitialData(); // Recarrega os dados para manter tudo sincronizado
+            } catch (err) {
+                console.error("Erro ao salvar canais:", err);
+                alert("Erro ao salvar canais: " + err.message);
+            }
+        });
+
+
         
        function setupEventListeners() {
     ts.searchJogo.on('change', (id) => loadSelectedItem('jogos', id));
