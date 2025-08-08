@@ -24,11 +24,120 @@
         .h2h-score { font-size: 0.9rem; font-weight: bold; }
 
         .loading-message { color: #888; } .thumbnail-link { display: block; position: relative; cursor: pointer; background-color: #000; width: 100%; height: 100%; } .thumbnail-link img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.8; transition: opacity 0.2s ease-in-out; } .thumbnail-link:hover img { opacity: 1; } .thumbnail-link::after { content: '▶'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; color: white; text-shadow: 0px 0px 15px rgba(0,0,0,0.8); pointer-events: none; transition: transform 0.2s ease-in-out; } .thumbnail-link:hover::after { transform: translate(-50%, -50%) scale(1.1); }
+    
+    .menu-toggle-btn {
+    display: none;
+}
+/* Estilo do overlay, escondido por padrão */
+.page-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+@media (max-width: 992px) {
+    /* Transforma a sidebar em um menu off-canvas */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    /* Estilo do botão do menu */
+    .menu-toggle-btn {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        width: 30px;
+        height: 30px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 10;
+    }
+    .menu-toggle-btn span {
+        width: 30px;
+        height: 3px;
+        background: #1c1e21;
+        border-radius: 5px;
+    }
+
+    /* Reorganiza o cabeçalho com alinhamento perfeito */
+    header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+    }
+    
+    .menu-toggle-btn { order: 1; }
+    .logo-container { order: 2; }
+    header::after {
+        content: '';
+        width: 30px;
+        order: 3;
+    }
+
+    /* Oculta o conteúdo principal quando o menu está aberto para evitar rolagem */
+    body.sidebar-open .content-wrapper {
+        overflow: hidden;
+    }
+
+    /* Estado "Aberto" do menu */
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+    body.sidebar-open .page-overlay {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Ajuste para o conteúdo principal não ter a sidebar */
+    .main-content {
+        display: block;
+    }
+    .game-content-wrapper {
+        flex-direction: column;
+    }
+    #video-section {
+        width: 100%;
+    }
+    #related-games-section {
+        width: 100%;
+        margin-top: 20px;
+        flex-basis: auto; /* Reseta a base flex para conteúdo dinâmico */
+    }
+}
+    
+    
+    
     </style>
 </head>
 <body>
     <div class="page-container">
-        <header><a href="index.html" class="logo-container"><img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image"><span class="logo-name">VARSOCCER</span></a></header><div class="content-wrapper"><nav class="sidebar"><div id="sidebar-content"><p class="loading-message">Loading...</p></div></nav><main class="main-content"><div class="game-content-wrapper"><section id="video-section"><h1 id="game-title"><p class="loading-message">Loading details...</p></h1><div id="video-container"><p class="loading-message">Loading vídeo...</p></div><div id="jornada-picker-section"></div></section><aside id="related-games-section"><h2>In this round</h2><div id="related-games-list"><p class="loading-message">Loading matches...</p></div></aside></div></main></div>
+
+        <header>
+            <button id="menu-toggle-btn" class="menu-toggle-btn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <a href="index.html" class="logo-container"><img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image"><span class="logo-name">VARSOCCER</span></a></header><div class="content-wrapper"><nav class="sidebar"><div id="sidebar-content"><p class="loading-message">Loading...</p><div id="page-overlay" class="page-overlay"></div></div></nav><main class="main-content"><div class="game-content-wrapper"><section id="video-section"><h1 id="game-title"><p class="loading-message">Loading details...</p></h1><div id="video-container"><p class="loading-message">Loading vídeo...</p></div><div id="jornada-picker-section"></div></section><aside id="related-games-section"><h2>In this round</h2><div id="related-games-list"><p class="loading-message">Loading matches...</p></div></aside></div></main></div>
     </div>
     
     <script type="module">
@@ -68,25 +177,30 @@
         const renderSidebar = (data) => { const s = document.getElementById('sidebar-content'); s.innerHTML = `<div class="sidebar-header"><a href="#" onclick="history.back();return false;" class="back-button">← Back</a></div><h2>See more goals:</h2>`; if (data.homeTeam) s.innerHTML += `<a href="team.html?id=${data.homeTeam.id}" class="related-link"><img src="${data.homeTeam.logoUrl}" class="related-logo" alt="${data.homeTeam.nome}"><span>${data.homeTeam.nome}</span></a>`; if (data.awayTeam) s.innerHTML += `<a href="team.html?id=${data.awayTeam.id}" class="related-link"><img src="${data.awayTeam.logoUrl}" class="related-logo" alt="${data.awayTeam.nome}"><span>${data.awayTeam.nome}</span></a>`; if (data.competition) s.innerHTML += `<a href="competition.html?id=${data.competition.id}" class="related-link"><img src="${data.competition.logoUrl}" class="related-logo" alt="${data.competition.nome}"><span>${data.competition.nome}</span></a>`; };
         
         // ##### NOVA FUNÇÃO PARA RENDERIZAR A SECÇÃO H2H #####
-        const renderH2HSection = (currentGameData, allSeasonGames) => {
-            if (!currentGameData.homeTeam || !currentGameData.awayTeam) return;
+       const renderH2HSection = (currentGameData, allSeasonGames) => {
+    if (!currentGameData.homeTeam || !currentGameData.awayTeam) return;
 
-            const homeId = currentGameData.homeTeam.id;
-            const awayId = currentGameData.awayTeam.id;
-            const currentId = currentGameData.id;
+    const homeId = currentGameData.homeTeam.id;
+    const awayId = currentGameData.awayTeam.id;
+    const currentId = currentGameData.id;
 
-            // Filtra todos os jogos da temporada para encontrar confrontos diretos
-            const h2hGames = allSeasonGames.filter(game => {
-                const isMatch = (game.equipaCasaId === homeId && game.equipaForaId === awayId) ||
-                              (game.equipaCasaId === awayId && game.equipaForaId === homeId);
-                // Exclui o jogo atual da lista de H2H
-                return isMatch && game.id !== currentId;
-            });
-
-            // Se não houver jogos H2H, a função termina e nada é renderizado
-            if (h2hGames.length === 0) {
-                return;
-            }
+    // Filtra todos os jogos da temporada para encontrar confrontos diretos
+    const h2hGames = allSeasonGames.filter(game => {
+        const isMatch = (game.equipaCasaId === homeId && game.equipaForaId === awayId) ||
+                      (game.equipaCasaId === awayId && game.equipaForaId === homeId);
+        
+        // CONDIÇÕES ATUALIZADAS:
+        // 1. Tem de ser entre as mesmas duas equipas (isMatch).
+        // 2. Não pode ser o jogo atual (game.id !== currentId).
+        // 3. O resultado final DEVE existir e não pode ser vazio (game.resultadoFinal).
+        // 4. O resultado final NÃO PODE ser "X" (game.resultadoFinal !== 'X').
+        return isMatch && game.id !== currentId && game.resultadoFinal && game.resultadoFinal !== 'X';
+    });
+    
+    // Se não houver jogos H2H após a filtragem, a função termina
+    if (h2hGames.length === 0) {
+        return;
+    }
 
             // Ordena os jogos pela data, do mais recente para o mais antigo
             h2hGames.sort((a, b) => parseDate(b.dataJogo) - parseDate(a.dataJogo));
@@ -118,40 +232,58 @@
         const renderJornadaPicker = (currentGamedata, allSeasonGames) => { const pickerSection = document.getElementById('jornada-picker-section'); if (!allSeasonGames || allSeasonGames.length === 0) { pickerSection.style.display = 'none'; return; } const allJornadas = [...new Set(allSeasonGames.map(g => g.jornada))].sort((a, b) => a - b); let pickerHtml = '<h3>Rounds:</h3><div id="jornada-picker-container">'; allJornadas.forEach(jornadaNum => { const gamesInThisJornada = allSeasonGames.filter(g => g.jornada === jornadaNum); const hasCompletedGame = gamesInThisJornada.some(game => game.resultadoFinal && game.resultadoFinal !== 'X'); if (gamesInThisJornada.length > 0 && hasCompletedGame) { gamesInThisJornada.sort((a, b) => parseDate(b.dataJogo) - parseDate(a.dataJogo)); const firstGameOfJornada = gamesInThisJornada[0]; const isCurrentJornada = jornadaNum == currentGamedata.game.jornada; const cardClass = `jornada-pickcard ${isCurrentJornada ? 'current-jornada' : ''}`; pickerHtml += `<a href="game.html?id=${firstGameOfJornada.id}" class="${cardClass}">Round ${jornadaNum}</a>`; } }); pickerHtml += '</div>'; if (pickerHtml.includes('jornada-pickcard')) { pickerSection.innerHTML = pickerHtml; pickerSection.style.display = 'block'; } else { pickerSection.style.display = 'none'; } };
         const setupSuggestionListeners = (gameId) => { const ssb = document.getElementById('show-suggestion-form-btn'); if (!ssb) return; const sf = document.getElementById('suggestion-form'); const sb = document.getElementById('save-video-btn'); const ui = document.getElementById('video-url-input'); const searchBtn = document.getElementById('search-youtube-btn'); ssb.addEventListener('click', () => { ssb.style.display = 'none'; sf.style.display = 'flex'; }); sf.addEventListener('submit', async (event) => { event.preventDefault(); const nu = ui.value.trim(); sb.disabled = true; sb.textContent = 'A gravar...'; try { await updateDoc(doc(db, 'jogos', gameId), { videoUrl: nu }); location.reload(); } catch (e) { console.error("Erro ao gravar vídeo: ", e); alert("Ocorreu um erro. Por favor, tente novamente."); sb.disabled = false; sb.textContent = 'Gravar'; } }); searchBtn.addEventListener('click', () => { const gameTitle = document.getElementById('game-title').textContent; if (gameTitle && !gameTitle.includes('Loading')) { window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(gameTitle + " melhores momentos")}`, '_blank'); } else { alert("Por favor, aguarde o título do jogo carregar."); } }); };
         
-        async function initializePage() {
-            const gameId = new URLSearchParams(window.location.search).get('id');
-            if (!gameId) {
-                document.querySelector('.main-content').innerHTML = '<h1>ID do jogo não fornecido.</h1>';
-                return;
-            }
-            try {
-                await fetchAndStoreClubs();
-                const fullData = await fetchFullGameData(gameId);
-                if (!fullData || !fullData.game) throw new Error("Não foi possível carregar os dados essenciais do jogo.");
-                
-                // Busca todos os jogos da temporada para usar nas várias secções
-                const gamesQuery = query(collection(db, 'jogos'), where("competicaoId", "==", fullData.game.competicaoId), where("temporada", "==", fullData.game.temporada));
-                const seasonSnapshot = await getDocs(gamesQuery);
-                const allSeasonGames = seasonSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                // Renderiza os componentes principais da página
-                await renderMainContent(fullData); 
-                renderSidebar(fullData);
-                renderRelatedGames(fullData, allSeasonGames);
-                renderJornadaPicker(fullData, allSeasonGames);
-                
-                // ##### CHAMA A NOVA FUNÇÃO H2H #####
-                renderH2HSection(fullData, allSeasonGames);
 
-                setupSuggestionListeners(gameId);
-
-            } catch (error) {
-                console.error(error);
-                document.querySelector('.main-content').innerHTML = `<h1>Erro: ${error.message}</h1>`;
-            }
-        }
+function setupMobileMenu() {
+    const menuButton = document.getElementById('menu-toggle-btn');
+    const overlay = document.getElementById('page-overlay');
     
-        initializePage();
+    if (menuButton) {
+        menuButton.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-open');
+        });
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            document.body.classList.remove('sidebar-open');
+        });
+    }
+}
+
+
+async function initializePage() {
+    const gameId = new URLSearchParams(window.location.search).get('id');
+    if (!gameId) {
+        document.querySelector('.main-content').innerHTML = '<h1>ID do jogo não fornecido.</h1>';
+        return;
+    }
+    try {
+        await fetchAndStoreClubs();
+        const fullData = await fetchFullGameData(gameId);
+        if (!fullData || !fullData.game) throw new Error("Não foi possível carregar os dados essenciais do jogo.");
+        
+        const gamesQuery = query(collection(db, 'jogos'), where("competicaoId", "==", fullData.game.competicaoId), where("temporada", "==", fullData.game.temporada));
+        const seasonSnapshot = await getDocs(gamesQuery);
+        const allSeasonGames = seasonSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        await renderMainContent(fullData); 
+        renderSidebar(fullData);
+        renderRelatedGames(fullData, allSeasonGames);
+        renderJornadaPicker(fullData, allSeasonGames);
+        renderH2HSection(fullData, allSeasonGames);
+        setupSuggestionListeners(gameId);
+
+        // Chame a função do menu aqui no final
+        setupMobileMenu();
+
+    } catch (error) {
+        console.error(error);
+        document.querySelector('.main-content').innerHTML = `<h1>Erro: ${error.message}</h1>`;
+    }
+}
+
+initializePage();
     </script>
 </body>
 </html>
