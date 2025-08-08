@@ -85,11 +85,102 @@
         .calendar-grid .day-cell.active.has-selected-comp-games { border-color: white; }
         .multi-select-dropdown label:has(input:disabled) { cursor: not-allowed; color: #999; background-color: #f5f5f5; }
         .multi-select-dropdown label:has(input:disabled):hover { background-color: #f5f5f5; }
+
+        .menu-toggle-btn {
+    display: none;
+}
+/* Estilo do overlay, escondido por padrão */
+.page-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+@media (max-width: 992px) {
+    /* Transforma a sidebar (de qualquer tipo) em um menu off-canvas */
+    .sidebar, .calendar-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 300px; /* Garante uma largura consistente */
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    /* Estilo do botão do menu */
+    .menu-toggle-btn {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        width: 30px;
+        height: 30px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 10;
+    }
+    .menu-toggle-btn span {
+        width: 30px;
+        height: 3px;
+        background: #1c1e21;
+        border-radius: 5px;
+    }
+
+    /* Reorganiza o cabeçalho com alinhamento perfeito */
+    header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+    }
+    
+    .menu-toggle-btn { order: 1; }
+    .logo-container { order: 2; }
+    header::after {
+        content: '';
+        width: 30px;
+        order: 3;
+    }
+
+    /* Estado "Aberto" do menu */
+    body.sidebar-open .sidebar, 
+    body.sidebar-open .calendar-sidebar {
+        transform: translateX(0);
+    }
+    body.sidebar-open .page-overlay {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Ajustes específicos para o conteúdo da página de calendário */
+    .multi-select-container {
+        max-width: 100%; /* Permite que o filtro ocupe toda a largura */
+    }
+}
+
     </style>
 </head>
 <body>
     <div class="page-container">
         <header>
+            <!-- BOTÃO DO MENU (POSIÇÃO CORRETA: DENTRO DO HEADER) -->
+            <button id="menu-toggle-btn" class="menu-toggle-btn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <a href="index.html" class="logo-container">
                 <img src="https://cdn-icons-png.flaticon.com/512/17214/17214595.png" alt="VARSOCCER Logo" class="logo-image">
                 <span class="logo-name">VARSOCCER</span>
@@ -115,6 +206,10 @@
                     <div id="month-filter-container" class="pick-card-container"><p class="loading-message">Loading...</p></div>
                 </div>
             </aside>
+
+            <!-- OVERLAY (POSIÇÃO CORRETA: FORA DA SIDEBAR) -->
+            <div id="page-overlay" class="page-overlay"></div>
+            
             <main class="main-content">
                 <div class="filters-container">
                     <div class="multi-select-container" id="competition-filter-container">
@@ -127,9 +222,6 @@
                 </div>
                 <h2>Match list</h2>
                 <div id="games-list-container"><p class="loading-message">Loading matches...</p></div>
-            </main>
-        </div>
-    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
@@ -347,6 +439,24 @@
             document.addEventListener('click', (e) => { if (!calendarWidget.contains(e.target)) { yearPanel.classList.remove('visible'); } });
         }
         
+
+        function setupMobileMenu() {
+    const menuButton = document.getElementById('menu-toggle-btn');
+    const overlay = document.getElementById('page-overlay');
+    
+    if (menuButton) {
+        menuButton.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-open');
+        });
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            document.body.classList.remove('sidebar-open');
+        });
+    }
+}
+
         // --- FUNÇÃO DE INICIALIZAÇÃO (MODIFICADA) ---
         async function initializeCalendarPage() {
             // 1. Carrega dados de suporte primeiro
@@ -379,13 +489,14 @@
             });
 
             // 5. Continua a inicialização da página com os dados limpos
-            applyFilters();
-            renderCompetitionFilter();
-            renderMonthFilter(allFetchedGames);
-            renderCalendar(calendarStateDate);
-            renderYearPanel(allFetchedGames);
-            setupFilterListeners();
-        }
+             applyFilters();
+    renderCompetitionFilter();
+    renderMonthFilter(allFetchedGames);
+    renderCalendar(calendarStateDate);
+    renderYearPanel(allFetchedGames);
+    setupFilterListeners();
+   setupMobileMenu(); 
+}
 
         initializeCalendarPage();
     </script>
