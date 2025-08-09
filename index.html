@@ -834,89 +834,78 @@
 }
 
 
-
 async function refreshGameDataAndUpdateUI() {
-            try {
-                // --- ETAPA 1: DEFINIR AS DATAS IMPORTANTES ---
-                const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const yesterday = new Date(today);
-                yesterday.setDate(today.getDate() - 1);
+    // A função auxiliar é definida AQUI DENTRO para garantir que está sempre disponível.
+    function getLocalDateAsISO(date) {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
 
-                const todayISO = today.toISOString().slice(0, 10);
-                const yesterdayISO = yesterday.toISOString().slice(0, 10);
-                
-                // --- ETAPA 2: CRIAR AS QUERIES SEPARADAS ---
+    try {
+        // --- ETAPA 1: DEFINIR AS DATAS IMPORTANTES ---
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
 
-                // Query para TODOS os jogos de HOJE
-                const todayGamesQuery = query(collection(db, 'jogos'), where("dataJogo", "==", todayISO));
-                
-                // Query para TODOS os jogos de ONTEM
-                const yesterdayGamesQuery = query(collection(db, 'jogos'), where("dataJogo", "==", yesterdayISO));
-                
-                // Query para os jogos mais ANTIGOS (para preencher o resto da lista)
-                const olderGamesQuery = query(
-                    collection(db, 'jogos'),
-                    where("dataJogo", "<", yesterdayISO), // Apenas datas ANTERIORES a ontem
-                    orderBy("dataJogo", "desc"),
-                    limit(200) // Pegamos 200 para ter uma boa margem para filtrar
-                );
+        // Usa a função auxiliar para obter a data local correta
+        const todayISO = getLocalDateAsISO(today);
+        const yesterdayISO = getLocalDateAsISO(yesterday);
+        
+        // --- ETAPA 2: CRIAR AS QUERIES SEPARADAS ---
+        const todayGamesQuery = query(collection(db, 'jogos'), where("dataJogo", "==", todayISO));
+        const yesterdayGamesQuery = query(collection(db, 'jogos'), where("dataJogo", "==", yesterdayISO));
+        const olderGamesQuery = query(
+            collection(db, 'jogos'),
+            where("dataJogo", "<", yesterdayISO),
+            orderBy("dataJogo", "desc"),
+            limit(200)
+        );
 
-                // Executa todas as buscas em paralelo para otimizar o tempo
-                const [todaySnapshot, yesterdaySnapshot, olderSnapshot] = await Promise.all([
-                    getDocs(todayGamesQuery),
-                    getDocs(yesterdayGamesQuery),
-                    getDocs(olderGamesQuery)
-                ]);
+        const [todaySnapshot, yesterdaySnapshot, olderSnapshot] = await Promise.all([
+            getDocs(todayGamesQuery),
+            getDocs(yesterdayGamesQuery),
+            getDocs(olderGamesQuery)
+        ]);
 
-                // Converte os resultados em arrays de objetos
-                const todayGamesFromDB = todaySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                const yesterdayGamesFromDB = yesterdaySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                const olderGamesFromDB = olderSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const todayGamesFromDB = todaySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const yesterdayGamesFromDB = yesterdaySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const olderGamesFromDB = olderSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                // --- ETAPA 3: FILTRAR E COMBINAR OS RESULTADOS ---
+        // --- ETAPA 3: FILTRAR E COMBINAR OS RESULTADOS ---
+        const isValidGame = (game) => {
+            const result = game.resultadoFinal;
+            return result && result.trim() !== '' && result.toUpperCase() !== 'X';
+        };
 
-                // Função auxiliar para validar os jogos (mesma regra de antes)
-                const isValidGame = (game) => {
-                    const result = game.resultadoFinal;
-                    return result && result.trim() !== '' && result.toUpperCase() !== 'X';
-                };
+        const validTodayGames = todayGamesFromDB.filter(isValidGame);
+        const validYesterdayGames = yesterdayGamesFromDB.filter(isValidGame);
+        const validOlderGames = olderGamesFromDB.filter(isValidGame);
 
-                // Filtra cada grupo de jogos
-                const validTodayGames = todayGamesFromDB.filter(isValidGame);
-                const validYesterdayGames = yesterdayGamesFromDB.filter(isValidGame);
-                const validOlderGames = olderGamesFromDB.filter(isValidGame);
+        const guaranteedGames = [...validTodayGames, ...validYesterdayGames];
+        const remainingGamesNeeded = 100 - guaranteedGames.length;
+        const olderGamesToFill = validOlderGames.slice(0, Math.max(0, remainingGamesNeeded));
 
-                // Junta os jogos de hoje e ontem, que são garantidos na lista
-                const guaranteedGames = [...validTodayGames, ...validYesterdayGames];
+        allFetchedGames = [...guaranteedGames, ...olderGamesToFill];
 
-                // Calcula quantos jogos mais antigos precisamos para tentar chegar a 100
-                const remainingGamesNeeded = 100 - guaranteedGames.length;
+        // --- ETAPA 4: RENDERIZAR TUDO ---
+        renderHighlightsFilters();
+        renderLatestFive(allFetchedGames);
+        renderFullList(allFetchedGames);
+        setupFilters(allFetchedGames);
 
-                // Pega os jogos mais antigos necessários (se for um número positivo)
-                const olderGamesToFill = validOlderGames.slice(0, Math.max(0, remainingGamesNeeded));
+    } catch (e) {
+        console.error("Erro ao atualizar os dados dos jogos:", e);
+        document.getElementById('latest-games-grid').innerHTML = '<p>Erro ao carregar as partidas.</p>';
+        document.getElementById('full-games-list').innerHTML = '<p>Erro ao carregar as partidas.</p>';
+    }
+}
 
-                // Monta a lista final
-                allFetchedGames = [...guaranteedGames, ...olderGamesToFill];
 
-                console.log(
-                    `Lista final composta por: ${validTodayGames.length} jogos de hoje, ` +
-                    `${validYesterdayGames.length} de ontem e ${olderGamesToFill.length} mais antigos. ` +
-                    `Total: ${allFetchedGames.length} jogos.`
-                );
 
-                // --- ETAPA 4: RENDERIZAR TUDO ---
-                renderHighlightsFilters();
-                renderLatestFive(allFetchedGames);
-                renderFullList(allFetchedGames);
-                setupFilters(allFetchedGames);
 
-            } catch (e) {
-                console.error("Erro ao atualizar os dados dos jogos:", e);
-                document.getElementById('latest-games-grid').innerHTML = '<p>Erro ao carregar as partidas.</p>';
-                document.getElementById('full-games-list').innerHTML = '<p>Erro ao carregar as partidas.</p>';
-            }
-        }
 
     async function initializePage() {
     await Promise.all([ fetchAndStoreClubs(), fetchAndStoreCompetitions(), fetchAndStoreCountries() ]);
