@@ -170,6 +170,11 @@
     }
 }
 
+ .dropdown-divider {
+            margin: 8px 15px; /* Alinha com o padding dos itens */
+            border-top: 1px solid #e0e0e0;
+        }
+
     </style>
 </head>
 <body>
@@ -261,16 +266,80 @@
         async function fetchAndStoreCountries() { if (countriesMap.size > 0) return; const s = await getDocs(collection(db, 'paises')); s.forEach(d => countriesMap.set(d.id, d.data())); }
         
         // --- Funções de Renderização (sem alterações) ---
-        function renderCompetitionFilter() {
+       function renderCompetitionFilter() {
             const dropdown = document.querySelector('#competition-filter-container .multi-select-dropdown');
             dropdown.innerHTML = '';
-            const competitionEntries = [...competitionsMap.entries()].sort((a,b) => a[1].nome.localeCompare(b[1].nome));
-            for(const [id, comp] of competitionEntries){
-                const item = document.createElement('label');
-                item.innerHTML = `<input type="checkbox" value="${id}"><img src="${comp.logoUrl}" class="dropdown-comp-logo" alt="${comp.nome} logo">${comp.nome}`;
-                dropdown.appendChild(item);
-            }
+
+            // --- INÍCIO DAS MODIFICAÇÕES ---
+
+            // 1. Criar arrays para cada grupo de competição
+            const nationComps = [];
+            const internationalComps = [];
+            const domesticComps = [];
+            const others = []; // Categoria para qualquer outro tipo não especificado
+
+            // 2. Categorizar cada competição com base no seu 'tipo'
+            competitionsMap.forEach((comp, id) => {
+                const competitionData = { id, ...comp }; // Junta o ID e os dados para facilitar
+                switch (comp.tipo) {
+                    case 'Nação Competição':
+                        nationComps.push(competitionData);
+                        break;
+                    case 'Internacional Clubes':
+                    case 'Internacional Taça':
+                        internationalComps.push(competitionData);
+                        break;
+                    case 'Doméstica Liga':
+                    case 'Doméstica Taça':
+                        domesticComps.push(competitionData);
+                        break;
+                    default:
+                        others.push(competitionData);
+                        break;
+                }
+            });
+
+            // 3. Ordenar cada grupo alfabeticamente pelo nome da competição
+            const sortByName = (a, b) => a.nome.localeCompare(b.nome);
+            nationComps.sort(sortByName);
+            internationalComps.sort(sortByName);
+            domesticComps.sort(sortByName);
+            others.sort(sortByName);
+
+            // 4. Construir o HTML final, grupo por grupo
+            let finalHtml = '';
+            
+            // Função auxiliar para criar o HTML de um item e não repetir código
+            const createItemHtml = (comp) => `
+                <label>
+                    <input type="checkbox" value="${comp.id}">
+                    <img src="${comp.logoUrl}" class="dropdown-comp-logo" alt="${comp.nome} logo">
+                    ${comp.nome}
+                </label>`;
+
+            // Função para criar o divisor
+            const createDividerHtml = () => `<div class="dropdown-divider"></div>`;
+
+            // Junta todos os grupos, adicionando divisores entre eles se não estiverem vazios
+            const allGroups = [nationComps, internationalComps, domesticComps, others];
+            let isFirstGroupRendered = false;
+
+            allGroups.forEach(group => {
+                if (group.length > 0) {
+                    if (isFirstGroupRendered) {
+                        finalHtml += createDividerHtml();
+                    }
+                    finalHtml += group.map(createItemHtml).join('');
+                    isFirstGroupRendered = true;
+                }
+            });
+
+            // 5. Inserir o HTML gerado no dropdown
+            dropdown.innerHTML = finalHtml;
+            
+            // --- FIM DAS MODIFICAÇÕES ---
         }
+        
         function renderMonthFilter(games) {
             const container = document.getElementById('month-filter-container');
             const uniqueMonths = new Set(games.map(g => parseDate(g.dataJogo).getUTCMonth()));
