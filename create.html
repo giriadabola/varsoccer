@@ -966,32 +966,56 @@ function updateResultadoFinal() {
             }
         }
         
-    async function calculateNextJornada() {
+ async function calculateNextJornada() {
     if (!tsJogoEquipaCasa) return;
     const { jornada, temporada } = singleGameElements;
-    const casaId = tsJogoEquipaCasa.getValue(), compId = tsJogoCompeticao.getValue();
-    if (!casaId || !temporada.value || !compId) return;
+    const equipaId = tsJogoEquipaCasa.getValue();
+    const compId = tsJogoCompeticao.getValue();
     
-    const q = query(collection(db, "jogos"), where("equipaCasaId", "==", casaId), where("temporada", "==", temporada.value), where("competicaoId", "==", compId));
-    const querySnapshot = await getDocs(q);
+    if (!equipaId || !temporada.value || !compId) return;
+
+    // Consulta para jogos em casa
+    const qCasa = query(collection(db, "jogos"), 
+        where("equipaCasaId", "==", equipaId), 
+        where("temporada", "==", temporada.value), 
+        where("competicaoId", "==", compId)
+    );
+    // Consulta para jogos fora
+    const qFora = query(collection(db, "jogos"), 
+        where("equipaForaId", "==", equipaId), 
+        where("temporada", "==", temporada.value), 
+        where("competicaoId", "==", compId)
+    );
+
+    const [snapCasa, snapFora] = await Promise.all([
+        getDocs(qCasa),
+        getDocs(qFora)
+    ]);
     
     let maxJornada = 0;
-    querySnapshot.forEach(doc => {
-        const jValue = parseInt(doc.data().jornada);
-        // Apenas considera se for um número válido
-        if (!isNaN(jValue) && jValue > maxJornada) {
-            maxJornada = jValue;
-        }
-    });
+    
+    // Processa os resultados de ambas as consultas
+    const processarResultados = (querySnapshot) => {
+        querySnapshot.forEach(doc => {
+            const jValue = parseInt(doc.data().jornada);
+            if (!isNaN(jValue) && jValue > maxJornada) {
+                maxJornada = jValue;
+            }
+        });
+    };
+    
+    processarResultados(snapCasa);
+    processarResultados(snapFora);
 
-    // Se a última jornada foi um número e menor que 40, sugere a próxima. Caso contrário, volta para 1.
-    if (maxJornada > 0 && maxJornada < 40) {
+    // --- BLOCO DE LÓGICA ALTERADO ---
+    if (maxJornada > 0 && maxJornada < 60) { // Alterado de 40 para 60
         jornada.value = maxJornada + 1;
-    } else if (maxJornada >= 40) {
-        jornada.value = 40; // Mantém em 40 se já for o máximo
+    } else if (maxJornada >= 60) {           // Alterado de 40 para 60
+        jornada.value = 60; // Mantém em 60 se já for o máximo
     } else {
         jornada.value = 1; // Padrão se não houver jornadas numéricas
     }
+    // --- FIM DA ALTERAÇÃO ---
 }
 
    function setupEventListeners() {
@@ -1124,7 +1148,7 @@ function updateResultadoFinal() {
     }
     
     // Preenche o dropdown de jornada com os números 1-40
-    for(let i=1; i<=40; i++) { 
+    for(let i=1; i<=60; i++) { 
         jornada.innerHTML += `<option value="${i}">${i}</option>`; 
     }
     
