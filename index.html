@@ -835,38 +835,42 @@
 
 
 
-       async function refreshGameDataAndUpdateUI() {
+ async function refreshGameDataAndUpdateUI() {
             try {
                 const now = new Date();
                 const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
                 const endOfTodayISO = endOfToday.toISOString().slice(0, 10);
 
+                // ETAPA 1: Aumentamos o limite da busca para 250 para "pescar" mais jogos.
                 const gamesQuery = query(
-                    collection(db, 'jogos'), 
+                    collection(db, 'jogos'),
                     where("dataJogo", "<=", endOfTodayISO),
-                    orderBy("dataJogo", "desc"), 
-                    limit(100)
+                    orderBy("dataJogo", "desc"),
+                    limit(250) // <<< MUDANÇA PRINCIPAL AQUI
                 );
-                
+
                 const snapshot = await getDocs(gamesQuery);
-                
-                // --- LINHA MODIFICADA ---
-                // Agora, filtramos os jogos cujo resultadoFinal é 'X' ou está vazio.
-                allFetchedGames = snapshot.docs
-                    .map(d => ({ id: d.id, ...d.data() }))
-                    .filter(game => {
-                        const result = game.resultadoFinal;
-                        return result && result.trim() !== '' && result.toUpperCase() !== 'X';
-                    });
+                const gamesFromDB = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                // ETAPA 2: O filtro continua o mesmo, removendo jogos inválidos.
+                const validGames = gamesFromDB.filter(game => {
+                    const result = game.resultadoFinal;
+                    return result && result.trim() !== '' && result.toUpperCase() !== 'X';
+                });
+
+                // ETAPA 3: Garantimos que pegamos apenas os 100 mais recentes da lista já filtrada.
+                allFetchedGames = validGames.slice(0, 100);
+
+                console.log(`Busca inicial retornou ${gamesFromDB.length} jogos. Após filtragem, ${allFetchedGames.length} jogos válidos serão exibidos.`);
 
                 renderHighlightsFilters();
                 renderLatestFive(allFetchedGames);
                 renderFullList(allFetchedGames);
                 setupFilters(allFetchedGames);
-            } catch(e) { 
-                console.error("Error refreshing game data:", e);
-                document.getElementById('latest-games-grid').innerHTML = '<p>Error loading matches.</p>';
-                document.getElementById('full-games-list').innerHTML = '<p>Error loading matches.</p>';
+            } catch (e) {
+                console.error("Erro ao atualizar os dados dos jogos:", e);
+                document.getElementById('latest-games-grid').innerHTML = '<p>Erro ao carregar as partidas.</p>';
+                document.getElementById('full-games-list').innerHTML = '<p>Erro ao carregar as partidas.</p>';
             }
         }
 
