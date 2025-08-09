@@ -388,9 +388,14 @@
         async function fetchAndStoreCountries() { if (countriesMap.size > 0) return; const s = await getDocs(collection(db, 'paises')); s.forEach(d => countriesMap.set(d.id, { id: d.id, ...d.data()})); }
         
         // --- FUNÇÕES DE RENDERIZAÇÃO DA SIDEBAR ---
-        async function fetchAndRenderSidebar() {
+     async function fetchAndRenderSidebar() {
             const listElement = document.getElementById('competition-list');
             try {
+                // --- INÍCIO DAS MODIFICAÇÕES ---
+                
+                // 1. Definir a lista de nomes dos "países" prioritários na ordem desejada
+                const priorityCountryNames = ["World", "Europe", "Asia", "South America", "North America", "Africa", "Oceania"];
+
                 const topCompetitions = [];
                 const competitionsByCountry = new Map();
 
@@ -408,28 +413,44 @@
 
                 topCompetitions.sort((a, b) => a.posicaoMenu - b.posicaoMenu);
 
-                const countriesWithCompetitions = [];
+                // 2. Criar duas listas separadas: uma para os prioritários e outra para os restantes
+                const priorityCountries = [];
+                const otherCountries = [];
+
+                // 3. Preencher as duas listas, separando os países
                 for (const paisId of competitionsByCountry.keys()) {
                     if (countriesMap.has(paisId)) {
-                        countriesWithCompetitions.push(countriesMap.get(paisId));
+                        const country = countriesMap.get(paisId);
+                        if (priorityCountryNames.includes(country.nome)) {
+                            priorityCountries.push(country);
+                        } else {
+                            otherCountries.push(country);
+                        }
                     }
                 }
-                countriesWithCompetitions.sort((a, b) => a.nome.localeCompare(b.nome));
+                
+                // 4. Ordenar as listas: a prioritária pela ordem definida, e a outra alfabeticamente
+                priorityCountries.sort((a, b) => priorityCountryNames.indexOf(a.nome) - priorityCountryNames.indexOf(b.nome));
+                otherCountries.sort((a, b) => a.nome.localeCompare(b.nome));
 
+                // 5. Construir o HTML final em três etapas
                 let html = '';
+                
+                // Etapa A: Renderizar as competições de topo
                 topCompetitions.forEach(comp => {
                     html += `<a href="competition.html?id=${comp.id}" class="competition-item" data-namming="${comp.namming || ''}"><img src="${comp.logoUrl}" class="competition-logo"><span class="competition-name">${comp.nome}</span></a>`;
                 });
 
-                if (topCompetitions.length > 0 && countriesWithCompetitions.length > 0) {
+                // Primeiro divisor (se necessário)
+                if (topCompetitions.length > 0 && (priorityCountries.length > 0 || otherCountries.length > 0)) {
                     html += `<hr class="sidebar-divider">`;
                 }
                 
-                countriesWithCompetitions.forEach(country => {
+                // Função auxiliar para não repetir código
+                const renderCountryGroup = (country) => {
                     const countryId = country.id;
                     const compsOfCountry = competitionsByCountry.get(countryId) || [];
-                    
-                    html += `
+                    return `
                         <div class="country-group">
                             <div class="country-header" data-country-id="${countryId}">
                                 <img src="${country.bandeiraUrl}" class="country-flag" alt="${country.nome}">
@@ -445,7 +466,24 @@
                             </div>
                         </div>
                     `;
+                };
+
+                // Etapa B: Renderizar o grupo de países prioritários
+                priorityCountries.forEach(country => {
+                    html += renderCountryGroup(country);
                 });
+
+                // Segundo divisor (se necessário)
+                if (priorityCountries.length > 0 && otherCountries.length > 0) {
+                    html += `<hr class="sidebar-divider">`;
+                }
+
+                // Etapa C: Renderizar os restantes países
+                otherCountries.forEach(country => {
+                    html += renderCountryGroup(country);
+                });
+
+                // --- FIM DAS MODIFICAÇÕES ---
 
                 listElement.innerHTML = html || '<p>No competition found.</p>';
 
