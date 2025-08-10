@@ -720,13 +720,14 @@ async function fetchAndStoreClubs() {
             let imageUrl = '';
             let imageTitle = '';
 
-            // Usar o logo da competição APENAS SE for internacional E o URL do logo existir.
-            if (comp && (comp.tipo === "Internacional Clubes" || comp.tipo === "Internacional Taça") && comp.logoUrl) {
+            // Usar o logo da competição SE for internacional, de nações, E o URL do logo existir.
+            // <-- ALTERAÇÃO AQUI
+            if (comp && (comp.tipo === "Internacional Clubes" || comp.tipo === "Internacional Taça" || comp.tipo === "Nação Competição") && comp.logoUrl) {
                 imageUrl = comp.logoUrl;
                 imageTitle = comp.nome;
             } else {
-                // Para TODOS os outros casos (ligas domésticas, ou jogos internacionais SEM logo), usar a bandeira do país.
-                imageUrl = country?.bandeiraUrl || ''; // Fallback para a bandeira do país
+                // Para TODOS os outros casos, usar a bandeira do país.
+                imageUrl = country?.bandeiraUrl || ''; 
                 imageTitle = country?.nome || '';
             }
             // --- FIM DA LÓGICA CORRIGIDA ---
