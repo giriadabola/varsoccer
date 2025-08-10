@@ -4,175 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalhes da Equipa</title>
-    <style>
-        /* Estilos Globais e Reset */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; }
-        
-        /* Layout Principal */
-        .page-container { display: flex; flex-direction: column; height: 100vh; }
-        
-        /* --- CABEÇALHO ATUALIZADO (SEM ANIMAÇÃO) --- */
-        header { padding: 10px 20px; background-color: #ffffff; border-bottom: 1px solid #dddfe2; }
-        .logo-container { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
-        .logo-image { height: 40px; width: 40px; }
-        .logo-name { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
-
-        .content-wrapper { display: flex; flex-grow: 1; overflow: hidden; }
-
-        /* Coluna Esquerda (Sidebar) */
-        .sidebar { width: 300px; flex-shrink: 0; background-color: #ffffff; padding: 15px; overflow-y: auto; border-right: 1px solid #dddfe2; }
-        .sidebar-header { margin-bottom: 20px; }
-        .back-button { display: inline-block; padding: 8px 16px; background-color: #e4e6eb; color: #050505; border-radius: 8px; text-decoration: none; font-weight: 500; transition: background-color 0.2s; }
-        .back-button:hover { background-color: #d8dbdf; }
-        .sidebar h2 { font-size: 1.2rem; margin-bottom: 15px; color: #333; }
-
-        /* Coluna Direita (Conteúdo Principal) */
-        .main-content { flex-grow: 1; padding: 25px; background-color: #f9f9f9; overflow-y: auto; }
-        .loading-message { color: #888; font-style: italic; }
-
-        /* Cabeçalho da Equipa */
-        #team-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #dddfe2; }
-        .team-info { display: flex; align-items: center; gap: 15px; }
-        #team-logo { height: 60px; object-fit: contain; }
-        #team-name { font-size: 2.2rem; font-weight: bold; }
-        #seasons-dropdown { padding: 10px; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc; }
-
-        /* Filtros de Competição */
-        #competition-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-        .filter-pill { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 16px; background-color: #e4e6eb; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
-        .filter-pill:hover { background-color: #d8dbdf; }
-        .filter-pill.active { background-color: #007bff; color: #fff; }
-        .filter-pill-logo { height: 20px; width: 20px; object-fit: contain; }
-
-        /* Lista de Jogos */
-        #games-list-container { display: flex; flex-direction: column; gap: 8px; }
-        .game-item { display: grid; grid-template-columns: 32px 1fr 50px; align-items: center; gap: 12px; padding: 10px; background-color: #fff; border-radius: 8px; text-decoration: none; color: inherit; transition: background-color 0.2s; border-left: 4px solid transparent; }
-        .game-item:hover { background-color: #f0f2f5; }
-        .competition-logo { width: 100%; height: 32px; object-fit: contain; }
-        .game-details { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
-        .team-display { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
-        .team-display.home { justify-content: flex-end; }
-        .team-display.away { justify-content: flex-start; }
-        .team-logo { width: 22px; height: 22px; object-fit: contain; }
-        .team-name { font-weight: 500; }
-        .game-score { font-weight: bold; font-size: 1rem; }
-        .game-jornada { text-align: center; font-size: 0.8rem; color: #666; }
-        .jornada-label { font-weight: bold; display: block; }
-        
-        /* Links Relacionados da Sidebar */
-        .related-link { display: flex; align-items: center; padding: 10px; border-radius: 8px; margin-bottom: 8px; text-decoration: none; color: inherit; transition: background-color 0.2s ease-in-out; }
-        .related-link:hover { background-color: #f0f2f5; cursor: pointer; }
-        .related-logo { width: 32px; height: 32px; object-fit: contain; margin-right: 12px; }
-        .related-name { font-weight: 500; }
-
-        .menu-toggle-btn {
-    display: none;
-}
-/* Estilo do overlay, escondido por padrão */
-.page-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-@media (max-width: 992px) {
-    /* Transforma a sidebar em um menu off-canvas */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100%;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out;
-        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-    }
+<style>
+    /* Estilos Globais e Reset */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; }
     
-    /* Estilo do botão do menu */
-    .menu-toggle-btn {
+    /* Layout Principal */
+    .page-container { display: flex; flex-direction: column; height: 100vh; }
+    
+    /* --- CABEÇALHO ATUALIZADO (SEM ANIMAÇÃO) --- */
+    header { padding: 10px 20px; background-color: #ffffff; border-bottom: 1px solid #dddfe2; }
+    .logo-container { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .logo-image { height: 40px; width: 40px; }
+    .logo-name { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
+
+    .content-wrapper { display: flex; flex-grow: 1; overflow: hidden; }
+
+    /* Coluna Esquerda (Sidebar) */
+    .sidebar { width: 300px; flex-shrink: 0; background-color: #ffffff; padding: 15px; overflow-y: auto; border-right: 1px solid #dddfe2; }
+    .sidebar-header { margin-bottom: 20px; }
+    .back-button { display: inline-block; padding: 8px 16px; background-color: #e4e6eb; color: #050505; border-radius: 8px; text-decoration: none; font-weight: 500; transition: background-color 0.2s; }
+    .back-button:hover { background-color: #d8dbdf; }
+    .sidebar h2 { font-size: 1.2rem; margin-bottom: 15px; color: #333; }
+
+    /* Coluna Direita (Conteúdo Principal) */
+    .main-content { flex-grow: 1; padding: 25px; background-color: #f9f9f9; overflow-y: auto; }
+    .loading-message { color: #888; font-style: italic; }
+
+    /* Cabeçalho da Equipa */
+    #team-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #dddfe2; }
+    .team-info { display: flex; align-items: center; gap: 15px; }
+    #team-logo { height: 60px; object-fit: contain; }
+
+    /* --- THIS IS THE MODIFIED SECTION --- */
+    .team-details-text {
         display: flex;
-        flex-direction: column;
-        justify-content: space-around;
-        width: 30px;
-        height: 30px;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        padding: 0;
-        z-index: 10;
-    }
-    .menu-toggle-btn span {
-        width: 30px;
-        height: 3px;
-        background: #1c1e21;
-        border-radius: 5px;
+        align-items: baseline; /* Aligns items on the same line by their text baseline */
+        gap: 15px;             /* Adds space between name and country info */
     }
 
-    /* Reorganiza o cabeçalho com alinhamento perfeito */
-    header {
+    #team-name { font-size: 2.2rem; font-weight: bold; }
+    
+    .team-country-info {
         display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
         align-items: center;
-        padding: 10px 15px;
+        gap: 8px;
+        font-size: 1rem;
+        color: #606770;
     }
     
-    .menu-toggle-btn { order: 1; }
-    .logo-container { order: 2; }
-    header::after {
-        content: '';
-        width: 30px;
-        order: 3;
+    .country-flag {
+        width: 20px;
+        height: auto;
+        object-fit: contain;
     }
 
-    /* Oculta o conteúdo principal quando o menu está aberto */
-    body.sidebar-open .content-wrapper {
-        overflow: hidden;
+    .country-divider {
+        font-weight: 300;
+        font-size: 1.5rem; /* Made slightly larger for better visual separation */
+        color: #ccc;
     }
+    /* --- END OF MODIFIED SECTION --- */
 
-    /* Estado "Aberto" do menu */
-    body.sidebar-open .sidebar {
-        transform: translateX(0);
-    }
-    body.sidebar-open .page-overlay {
-        opacity: 1;
-        visibility: visible;
-    }
+    #seasons-dropdown { padding: 10px; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc; }
 
-    /* Ajustes específicos para o conteúdo desta página */
-    #team-header {
-        flex-direction: column;
-        align-items: flex-start; /* Alinha à esquerda */
-        gap: 15px;
-    }
-    #team-name {
-        font-size: 1.8rem; /* Reduz a fonte do nome da equipa */
-    }
-    #competition-filters {
-        flex-wrap: nowrap; /* Transforma em carrossel */
-        overflow-x: auto;
-        padding-bottom: 10px;
-    }
-    .filter-pill {
-        flex-shrink: 0; /* Impede que os botões encolham */
-    }
-    .game-item {
-        grid-template-columns: 32px 1fr; /* Simplifica a grade para mobile */
-    }
-    .game-jornada {
-        display: none; /* Opcional: esconde a jornada para economizar espaço */
-    }
-}
+    /* Filtros de Competição */
+    #competition-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .filter-pill { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 16px; background-color: #e4e6eb; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+    .filter-pill:hover { background-color: #d8dbdf; }
+    .filter-pill.active { background-color: #007bff; color: #fff; }
+    .filter-pill-logo { height: 20px; width: 20px; object-fit: contain; }
 
-    </style>
+    /* Lista de Jogos */
+    #games-list-container { display: flex; flex-direction: column; gap: 8px; }
+    .game-item { display: grid; grid-template-columns: 32px 1fr 50px; align-items: center; gap: 12px; padding: 10px; background-color: #fff; border-radius: 8px; text-decoration: none; color: inherit; transition: background-color 0.2s; border-left: 4px solid transparent; }
+    .game-item:hover { background-color: #f0f2f5; }
+    .competition-logo { width: 100%; height: 32px; object-fit: contain; }
+    .game-details { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+    .team-display { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+    .team-display.home { justify-content: flex-end; }
+    .team-display.away { justify-content: flex-start; }
+    .team-logo { width: 22px; height: 22px; object-fit: contain; }
+    .team-name { font-weight: 500; }
+    .game-score { font-weight: bold; font-size: 1rem; }
+    .game-jornada { text-align: center; font-size: 0.8rem; color: #666; }
+    .jornada-label { font-weight: bold; display: block; }
+    
+    /* Links Relacionados da Sidebar */
+    .related-link { display: flex; align-items: center; padding: 10px; border-radius: 8px; margin-bottom: 8px; text-decoration: none; color: inherit; transition: background-color 0.2s ease-in-out; }
+    .related-link:hover { background-color: #f0f2f5; cursor: pointer; }
+    .related-logo { width: 32px; height: 32px; object-fit: contain; margin-right: 12px; }
+    .related-name { font-weight: 500; }
+
+    .menu-toggle-btn { display: none; }
+    .page-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+
+    @media (max-width: 992px) {
+        .sidebar { position: fixed; top: 0; left: 0; height: 100%; z-index: 1000; transform: translateX(-100%); transition: transform 0.3s ease-in-out; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .menu-toggle-btn { display: flex; flex-direction: column; justify-content: space-around; width: 30px; height: 30px; background: transparent; border: none; cursor: pointer; padding: 0; z-index: 10; }
+        .menu-toggle-btn span { width: 30px; height: 3px; background: #1c1e21; border-radius: 5px; }
+        header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 10px 15px; }
+        .menu-toggle-btn { order: 1; }
+        .logo-container { order: 2; }
+        header::after { content: ''; width: 30px; order: 3; }
+        body.sidebar-open .content-wrapper { overflow: hidden; }
+        body.sidebar-open .sidebar { transform: translateX(0); }
+        body.sidebar-open .page-overlay { opacity: 1; visibility: visible; }
+        #team-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+        #team-name { font-size: 1.8rem; }
+        #competition-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 10px; }
+        .filter-pill { flex-shrink: 0; }
+        .game-item { grid-template-columns: 32px 1fr; }
+        .game-jornada { display: none; }
+        #team-header .team-info { align-items: center; } /* Minor mobile adjustment */
+    }
+</style>
 </head>
 <body>
     <div class="page-container">
@@ -200,217 +146,288 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+   <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o",
-            authDomain: "varsoccer-26040.firebaseapp.com",
-            projectId: "varsoccer-26040",
-            storageBucket: "varsoccer-26040.firebasestorage.app",
-            messagingSenderId: "11877829810",
-            appId: "1:11877829810:web:98f9baa131a3b88b6e8dab"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    const firebaseConfig = {
+        apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o",
+        authDomain: "varsoccer-26040.firebaseapp.com",
+        projectId: "varsoccer-26040",
+        storageBucket: "varsoccer-26040.firebasestorage.app",
+        messagingSenderId: "11877829810",
+        appId: "1:11877829810:web:98f9baa131a3b88b6e8dab"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        let clubsMap = new Map();
-        let competitionsMap = new Map();
-        let allGamesOfSeason = [];
+    // Global variables to store fetched data
+    let clubsMap = new Map();
+    let competitionsMap = new Map();
+    let countriesMap = new Map(); // Map for storing country data
+    let allGamesOfSeason = [];
 
-        // --- FUNÇÕES AUXILIARES E DE INICIALIZAÇÃO ---
+    // --- DATA FETCHING FUNCTIONS ---
 
-        async function fetchAndStoreClubs() { if (clubsMap.size > 0) return; try { const snapshot = await getDocs(collection(db, 'clubes')); snapshot.forEach(doc => { clubsMap.set(doc.id, doc.data()); }); } catch (error) { console.error("Erro ao buscar clubes:", error); } };
-        async function fetchAndStoreCompetitions() { if (competitionsMap.size > 0) return; try { const snapshot = await getDocs(collection(db, 'competicoes')); snapshot.forEach(doc => { competitionsMap.set(doc.id, doc.data()); }); } catch (error) { console.error("Erro ao buscar competições:", error); } };
-
-        /**
-         * Função auxiliar para converter uma string de data (DD/MM/YYYY) para um objeto Date.
-         * @param {string} dateString - A data no formato "DD/MM/YYYY".
-         * @returns {Date} - O objeto Date correspondente.
-         */
-        function parseDate(dateString) {
-            if (!dateString) return new Date(null); // Retorna data inválida se a string for nula/vazia
-            if (dateString.includes('-')) { return new Date(dateString); }
-            const parts = dateString.split('/');
-            if (parts.length === 3) { return new Date(parts[2], parts[1] - 1, parts[0]); }
-            return new Date(null);
+    async function fetchAndStoreClubs() {
+        if (clubsMap.size > 0) return;
+        try {
+            const snapshot = await getDocs(collection(db, 'clubes'));
+            snapshot.forEach(doc => {
+                clubsMap.set(doc.id, doc.data());
+            });
+        } catch (error) {
+            console.error("Erro ao buscar clubes:", error);
         }
-
-        /**
-         * Busca e exibe os jogos para uma equipa e temporada específicas,
-         * aplicando uma regra para ocultar jogos futuros sem resultado.
-         * @param {string} teamId - O ID do clube no Firestore.
-         * @param {string} seasonName - O nome da temporada (ex: "2023/2024").
-         */
-        async function fetchAndDisplayGamesForSeason(teamId, seasonName) {
-            const filtersContainer = document.getElementById('competition-filters');
-            const gamesContainer = document.getElementById('games-list-container');
-            filtersContainer.innerHTML = '';
-            gamesContainer.innerHTML = `<p class="loading-message">A carregar jogos...</p>`;
-
-            const homeGamesQuery = query(collection(db, 'jogos'), where("equipaCasaId", "==", teamId), where("temporada", "==", seasonName));
-            const awayGamesQuery = query(collection(db, 'jogos'), where("equipaForaId", "==", teamId), where("temporada", "==", seasonName));
-
-            try {
-                const [homeGamesSnap, awayGamesSnap] = await Promise.all([getDocs(homeGamesQuery), getDocs(awayGamesQuery)]);
-                let combinedGames = [];
-                homeGamesSnap.forEach(doc => combinedGames.push({ id: doc.id, ...doc.data() }));
-                awayGamesSnap.forEach(doc => combinedGames.push({ id: doc.id, ...doc.data() }));
-
-                const now = new Date();
-                now.setHours(0, 0, 0, 0); // Define a hora para o início do dia para uma comparação justa
-
-                allGamesOfSeason = combinedGames.filter(game => {
-                    const gameDate = parseDate(game.dataJogo);
-
-                    // Se a data do jogo for inválida, mantenha o jogo para evitar ocultá-lo por engano.
-                    if (isNaN(gameDate.getTime())) {
-                        return true; 
-                    }
-                    
-                    const isFutureGame = gameDate > now;
-                    const hasInvalidResult = !game.resultadoFinal || game.resultadoFinal.trim() === "" || game.resultadoFinal.toUpperCase() === 'X';
-                    
-                    // Exclui o jogo se ele for no futuro E tiver um resultado inválido.
-                    return !(isFutureGame && hasInvalidResult);
-                });
-
-                if (allGamesOfSeason.length === 0) {
-                    gamesContainer.innerHTML = '<p>No matches found for this season, or upcoming matches do not have results yet.</p>';
-                    renderSidebarCompetitions([]);
-                    return;
-                }
-
-                allGamesOfSeason.sort((a, b) => parseDate(b.dataJogo) - parseDate(a.dataJogo));
-
-                renderCompetitionFilters(allGamesOfSeason);
-                filterAndRenderGames('all');
-                renderSidebarCompetitions(allGamesOfSeason);
-            } catch (error) {
-                console.error("Erro ao buscar jogos:", error);
-                gamesContainer.innerHTML = '<p>Ocorreu um erro ao carregar os jogos.</p>';
-            }
-        };
-
-        // --- FUNÇÕES DE RENDERIZAÇÃO ---
-
-        function renderCompetitionFilters(games) {
-            const filtersContainer = document.getElementById('competition-filters');
-            const uniqueCompetitionIds = [...new Set(games.map(game => game.competicaoId))];
-            let filtersHTML = `<div class="filter-pill active" data-competition-id="all">All</div>`;
-            uniqueCompetitionIds.forEach(id => {
-                const comp = competitionsMap.get(id);
-                if (comp) { filtersHTML += `<div class="filter-pill" data-competition-id="${id}"><img src="${comp.logoUrl}" class="filter-pill-logo"><span>${comp.nome}</span></div>`; }
+    };
+    
+    async function fetchAndStoreCompetitions() {
+        if (competitionsMap.size > 0) return;
+        try {
+            const snapshot = await getDocs(collection(db, 'competicoes'));
+            snapshot.forEach(doc => {
+                competitionsMap.set(doc.id, doc.data());
             });
-            filtersContainer.innerHTML = filtersHTML;
-            filtersContainer.addEventListener('click', (event) => {
-                const pill = event.target.closest('.filter-pill');
-                if (!pill) return;
-                filtersContainer.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-                filterAndRenderGames(pill.dataset.competitionId);
+        } catch (error) {
+            console.error("Erro ao buscar competições:", error);
+        }
+    };
+    
+    // New function to fetch and store country data
+    async function fetchAndStoreCountries() {
+        if (countriesMap.size > 0) return;
+        try {
+            const snapshot = await getDocs(collection(db, 'paises'));
+            snapshot.forEach(doc => {
+                countriesMap.set(doc.id, doc.data());
             });
-        };
+        } catch (error) {
+            console.error("Erro ao buscar países:", error);
+        }
+    };
 
-        function filterAndRenderGames(competitionId) {
-            const gamesContainer = document.getElementById('games-list-container');
-            gamesContainer.innerHTML = '';
-            const gamesToRender = competitionId === 'all' ? allGamesOfSeason : allGamesOfSeason.filter(game => game.competicaoId === competitionId);
-            if (gamesToRender.length === 0) {
-                gamesContainer.innerHTML = '<p>Nenhum jogo encontrado para esta competição.</p>';
+    // --- UTILITY FUNCTIONS ---
+
+    function parseDate(dateString) {
+        if (!dateString) return new Date(null);
+        if (dateString.includes('-')) { return new Date(dateString); }
+        const parts = dateString.split('/');
+        if (parts.length === 3) { return new Date(parts[2], parts[1] - 1, parts[0]); }
+        return new Date(null);
+    }
+
+    // --- CORE LOGIC FUNCTIONS ---
+
+    async function fetchAndDisplayGamesForSeason(teamId, seasonName) {
+        const filtersContainer = document.getElementById('competition-filters');
+        const gamesContainer = document.getElementById('games-list-container');
+        filtersContainer.innerHTML = '';
+        gamesContainer.innerHTML = `<p class="loading-message">A carregar jogos...</p>`;
+
+        const homeGamesQuery = query(collection(db, 'jogos'), where("equipaCasaId", "==", teamId), where("temporada", "==", seasonName));
+        const awayGamesQuery = query(collection(db, 'jogos'), where("equipaForaId", "==", teamId), where("temporada", "==", seasonName));
+
+        try {
+            const [homeGamesSnap, awayGamesSnap] = await Promise.all([getDocs(homeGamesQuery), getDocs(awayGamesQuery)]);
+            let combinedGames = [];
+            homeGamesSnap.forEach(doc => combinedGames.push({ id: doc.id, ...doc.data() }));
+            awayGamesSnap.forEach(doc => combinedGames.push({ id: doc.id, ...doc.data() }));
+
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+
+            allGamesOfSeason = combinedGames.filter(game => {
+                const gameDate = parseDate(game.dataJogo);
+                if (isNaN(gameDate.getTime())) return true;
+                const isFutureGame = gameDate > now;
+                const hasInvalidResult = !game.resultadoFinal || game.resultadoFinal.trim() === "" || game.resultadoFinal.toUpperCase() === 'X';
+                return !(isFutureGame && hasInvalidResult);
+            });
+
+            if (allGamesOfSeason.length === 0) {
+                gamesContainer.innerHTML = '<p>No matches found for this season, or upcoming matches do not have results yet.</p>';
+                renderSidebarCompetitions([]);
                 return;
             }
-            gamesToRender.forEach(game => {
-                const competition = competitionsMap.get(game.competicaoId);
-                const homeTeam = clubsMap.get(game.equipaCasaId);
-                const awayTeam = clubsMap.get(game.equipaForaId);
-                if (!competition || !homeTeam || !awayTeam) return;
-                gamesContainer.innerHTML += `<a href="game.html?id=${game.id}" class="game-item" style="border-left-color: ${competition.cor || '#ccc'};"><img src="${competition.logoUrl}" alt="${competition.nome}" class="competition-logo" title="${competition.nome}"><div class="game-details"><div class="team-display home"><span class="team-name">${homeTeam.nome}</span><img src="${homeTeam.logoUrl}" alt="${homeTeam.nome}" class="team-logo"></div><span class="game-score">${game.resultadoFinal || 'VS'}</span><div class="team-display away"><img src="${awayTeam.logoUrl}" alt="${awayTeam.nome}" class="team-logo"><span class="team-name">${awayTeam.nome}</span></div></div><div class="game-jornada"><span class="jornada-label">Round</span><span>${game.jornada || '-'}</span></div></a>`;
-            });
-        };
 
-        function renderSidebarHeader() {
-            const sidebar = document.getElementById('sidebar-content');
-            sidebar.innerHTML = `<div class="sidebar-header"><a href="#" id="back-button" class="back-button">← Back</a></div>`;
-            document.getElementById('back-button').addEventListener('click', (e) => { e.preventDefault(); history.back(); });
-        };
-        
-        function renderSidebarCompetitions(games) {
-            const sidebar = document.getElementById('sidebar-content');
-            renderSidebarHeader();
-            const compSection = document.createElement('div');
-            if (games.length === 0) {
-                compSection.innerHTML = '<h2>See more goals from:</h2><p>No competition found.</p>';
-            } else {
-                const uniqueCompetitionIds = [...new Set(games.map(game => game.competicaoId))];
-                compSection.innerHTML = '<h2>See more goals from:</h2>';
-                uniqueCompetitionIds.forEach(id => {
-                    const comp = competitionsMap.get(id);
-                    if (comp) { compSection.innerHTML += `<a href="competition.html?id=${id}" class="related-link"><img src="${comp.logoUrl}" class="related-logo"><span class="related-name">${comp.nome}</span></a>`; }
-                });
+            allGamesOfSeason.sort((a, b) => parseDate(b.dataJogo) - parseDate(a.dataJogo));
+
+            renderCompetitionFilters(allGamesOfSeason);
+            filterAndRenderGames('all');
+            renderSidebarCompetitions(allGamesOfSeason);
+        } catch (error) {
+            console.error("Erro ao buscar jogos:", error);
+            gamesContainer.innerHTML = '<p>Ocorreu um erro ao carregar os jogos.</p>';
+        }
+    };
+
+    // --- RENDERING FUNCTIONS ---
+
+    function renderCompetitionFilters(games) {
+        const filtersContainer = document.getElementById('competition-filters');
+        const uniqueCompetitionIds = [...new Set(games.map(game => game.competicaoId))];
+        let filtersHTML = `<div class="filter-pill active" data-competition-id="all">All</div>`;
+        uniqueCompetitionIds.forEach(id => {
+            const comp = competitionsMap.get(id);
+            if (comp) {
+                filtersHTML += `<div class="filter-pill" data-competition-id="${id}"><img src="${comp.logoUrl}" class="filter-pill-logo"><span>${comp.nome}</span></div>`;
             }
-            sidebar.appendChild(compSection);
-        };
-        
-        const renderTeamHeader = (teamData) => { document.getElementById('team-header').innerHTML = `<div class="team-info"><img src="${teamData.logoUrl}" id="team-logo" alt="${teamData.nome}"><h1 id="team-name">${teamData.nome}</h1></div><div id="seasons-dropdown-container"></div>`; };
-        
-        const renderSeasonsDropdown = async (teamId) => {
-            const container = document.getElementById('seasons-dropdown-container');
-            const seasonsSnap = await getDocs(collection(db, 'temporadas'));
-            const seasonNames = [...new Set(Array.from(seasonsSnap.docs).map(doc => doc.data().nome))].sort().reverse();
-            let selectHTML = `<select id="seasons-dropdown">`;
-            seasonNames.forEach(name => { selectHTML += `<option value="${name}">${name}</option>`; });
-            selectHTML += `</select>`;
-            container.innerHTML = selectHTML;
-            const dropdown = document.getElementById('seasons-dropdown');
-            dropdown.addEventListener('change', (e) => fetchAndDisplayGamesForSeason(teamId, e.target.value));
-            await fetchAndDisplayGamesForSeason(teamId, dropdown.value);
-        };
+        });
+        filtersContainer.innerHTML = filtersHTML;
+        filtersContainer.addEventListener('click', (event) => {
+            const pill = event.target.closest('.filter-pill');
+            if (!pill) return;
+            filtersContainer.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            filterAndRenderGames(pill.dataset.competitionId);
+        });
+    };
 
+    function filterAndRenderGames(competitionId) {
+        const gamesContainer = document.getElementById('games-list-container');
+        gamesContainer.innerHTML = '';
+        const gamesToRender = competitionId === 'all' ? allGamesOfSeason : allGamesOfSeason.filter(game => game.competicaoId === competitionId);
+        if (gamesToRender.length === 0) {
+            gamesContainer.innerHTML = '<p>Nenhum jogo encontrado para esta competição.</p>';
+            return;
+        }
+        gamesToRender.forEach(game => {
+            const competition = competitionsMap.get(game.competicaoId);
+            const homeTeam = clubsMap.get(game.equipaCasaId);
+            const awayTeam = clubsMap.get(game.equipaForaId);
+            if (!competition || !homeTeam || !awayTeam) return;
+            gamesContainer.innerHTML += `
+                <a href="game.html?id=${game.id}" class="game-item" style="border-left-color: ${competition.cor || '#ccc'};">
+                    <img src="${competition.logoUrl}" alt="${competition.nome}" class="competition-logo" title="${competition.nome}">
+                    <div class="game-details">
+                        <div class="team-display home">
+                            <span class="team-name">${homeTeam.nome}</span>
+                            <img src="${homeTeam.logoUrl}" alt="${homeTeam.nome}" class="team-logo">
+                        </div>
+                        <span class="game-score">${game.resultadoFinal || 'VS'}</span>
+                        <div class="team-display away">
+                            <img src="${awayTeam.logoUrl}" alt="${awayTeam.nome}" class="team-logo">
+                            <span class="team-name">${awayTeam.nome}</span>
+                        </div>
+                    </div>
+                    <div class="game-jornada">
+                        <span class="jornada-label">Round</span>
+                        <span>${game.jornada || '-'}</span>
+                    </div>
+                </a>`;
+        });
+    };
 
-        function setupMobileMenu() {
-    const menuButton = document.getElementById('menu-toggle-btn');
-    const overlay = document.getElementById('page-overlay');
+    function renderSidebarHeader() {
+        const sidebar = document.getElementById('sidebar-content');
+        sidebar.innerHTML = `<div class="sidebar-header"><a href="#" id="back-button" class="back-button">← Back</a></div>`;
+        document.getElementById('back-button').addEventListener('click', (e) => {
+            e.preventDefault();
+            history.back();
+        });
+    };
+
+    function renderSidebarCompetitions(games) {
+        const sidebar = document.getElementById('sidebar-content');
+        renderSidebarHeader();
+        const compSection = document.createElement('div');
+        if (games.length === 0) {
+            compSection.innerHTML = '<h2>See more goals from:</h2><p>No competition found.</p>';
+        } else {
+            const uniqueCompetitionIds = [...new Set(games.map(game => game.competicaoId))];
+            compSection.innerHTML = '<h2>See more goals from:</h2>';
+            uniqueCompetitionIds.forEach(id => {
+                const comp = competitionsMap.get(id);
+                if (comp) {
+                    compSection.innerHTML += `<a href="competition.html?id=${id}" class="related-link"><img src="${comp.logoUrl}" class="related-logo"><span class="related-name">${comp.nome}</span></a>`;
+                }
+            });
+        }
+        sidebar.appendChild(compSection);
+    };
+
+    // Updated function to render the team header with country info
+    const renderTeamHeader = (teamData) => {
+        let countryHtml = '';
+        if (teamData.paisId && countriesMap.has(teamData.paisId)) {
+            const country = countriesMap.get(teamData.paisId);
+            countryHtml = `
+                <div class="team-country-info">
+                    <span class="country-divider">|</span>
+                    <img src="${country.bandeiraUrl}" alt="Flag of ${country.nome}" class="country-flag">
+                    <span class="country-name">${country.nome}</span>
+                </div>
+            `;
+        }
+        const headerHtml = `
+            <div class="team-info">
+                <img src="${teamData.logoUrl}" id="team-logo" alt="${teamData.nome}">
+                <div class="team-details-text">
+                    <h1 id="team-name">${teamData.nome}</h1>
+                    ${countryHtml}
+                </div>
+            </div>
+            <div id="seasons-dropdown-container"></div>`;
+        document.getElementById('team-header').innerHTML = headerHtml;
+    };
+
+    const renderSeasonsDropdown = async (teamId) => {
+        const container = document.getElementById('seasons-dropdown-container');
+        const seasonsSnap = await getDocs(collection(db, 'temporadas'));
+        const seasonNames = [...new Set(Array.from(seasonsSnap.docs).map(doc => doc.data().nome))].sort().reverse();
+        let selectHTML = `<select id="seasons-dropdown">`;
+        seasonNames.forEach(name => {
+            selectHTML += `<option value="${name}">${name}</option>`;
+        });
+        selectHTML += `</select>`;
+        container.innerHTML = selectHTML;
+        const dropdown = document.getElementById('seasons-dropdown');
+        dropdown.addEventListener('change', (e) => fetchAndDisplayGamesForSeason(teamId, e.target.value));
+        await fetchAndDisplayGamesForSeason(teamId, dropdown.value);
+    };
     
-    if (menuButton) {
-        menuButton.addEventListener('click', () => {
-            document.body.classList.toggle('sidebar-open');
-        });
-    }
+    // --- UI INTERACTION FUNCTIONS ---
 
-    if (overlay) {
-        overlay.addEventListener('click', () => {
-            document.body.classList.remove('sidebar-open');
-        });
+    function setupMobileMenu() {
+        const menuButton = document.getElementById('menu-toggle-btn');
+        const overlay = document.getElementById('page-overlay');
+        if (menuButton) {
+            menuButton.addEventListener('click', () => {
+                document.body.classList.toggle('sidebar-open');
+            });
+        }
+        if (overlay) {
+            overlay.addEventListener('click', () => {
+                document.body.classList.remove('sidebar-open');
+            });
+        }
     }
-}
+    
+    // --- INITIALIZATION ---
 
-// ... todo o seu código JS existente ...
-
-async function initializePage() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const teamId = urlParams.get('id');
-    if (!teamId) {
-        document.querySelector('.main-content').innerHTML = '<h1>ID da equipa não fornecido na URL.</h1>';
-        return;
-    }
-    renderSidebarHeader();
-    await Promise.all([fetchAndStoreClubs(), fetchAndStoreCompetitions()]);
-    const teamDocSnap = await getDoc(doc(db, 'clubes', teamId));
-    if (teamDocSnap.exists()) {
-        renderTeamHeader(teamDocSnap.data());
-        await renderSeasonsDropdown(teamId);
+    async function initializePage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const teamId = urlParams.get('id');
+        if (!teamId) {
+            document.querySelector('.main-content').innerHTML = '<h1>ID da equipa não fornecido na URL.</h1>';
+            return;
+        }
+        renderSidebarHeader();
+        // Fetch all required data in parallel, including the new country data
+        await Promise.all([fetchAndStoreClubs(), fetchAndStoreCompetitions(), fetchAndStoreCountries()]);
         
-        // CHAME A FUNÇÃO DO MENU AQUI, NO FINAL
-        setupMobileMenu();
-
-    } else {
-        document.querySelector('.main-content').innerHTML = '<h1>Equipa não encontrada.</h1>';
+        const teamDocSnap = await getDoc(doc(db, 'clubes', teamId));
+        if (teamDocSnap.exists()) {
+            renderTeamHeader(teamDocSnap.data()); // This now renders the header with country info
+            await renderSeasonsDropdown(teamId);
+            setupMobileMenu(); // Setup mobile menu after content is ready
+        } else {
+            document.querySelector('.main-content').innerHTML = '<h1>Equipa não encontrada.</h1>';
+        }
     }
-}
-initializePage();
+    
+    initializePage();
+</script>
 
-    </script>
 </body>
 </html>
