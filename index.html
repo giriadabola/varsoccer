@@ -368,6 +368,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         let clubsMap = new Map();
+        let clubOriginalOrder = new Map();
         let competitionsMap = new Map();
         let countriesMap = new Map();
         let allFetchedGames = [];
@@ -375,6 +376,35 @@
         // --- FUNÇÕES AUXILIARES ---
         const formatDate = (date) => new Date(date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
+        /**
+         * NOVA FUNÇÃO: Tenta adivinhar o país do utilizador com base no fuso horário do navegador.
+         * Retorna o nome do país em inglês para corresponder à base de dados.
+         */
+      function getUserCountryName() {
+    try {
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; // Ex: "Europe/Lisbon"
+        
+        // Mapeamento de identificadores de fuso horário para nomes de países (em inglês, como na BD)
+        const tzMap = {
+            'Lisbon': 'Portugal',
+            'Madrid': 'Spain',
+            'London': 'England',
+            'Paris': 'France',
+            'Berlin': 'Germany',
+            'Rome': 'Italy',
+            'Sao_Paulo': 'Brazil'
+            // Este mapa pode ser expandido para maior precisão
+        };
+
+        const city = timeZone.split('/')[1]; // Extrai "Lisbon" de "Europe/Lisbon"
+        return tzMap[city] || null;
+
+    } catch (e) {
+        console.warn("Could not determine user country from timezone.");
+        return null;
+    }
+}
+
         function parseDate(dateString) {
             if (!dateString) return new Date(null);
             if (dateString.includes('-')) { return new Date(dateString); }
@@ -383,8 +413,19 @@
             return new Date(null);
         }
         
-        async function fetchAndStoreClubs() { if (clubsMap.size > 0) return; const s = await getDocs(collection(db, 'clubes')); s.forEach(d => clubsMap.set(d.id, { id: d.id, ...d.data() })); }
-        async function fetchAndStoreCompetitions() { competitionsMap.clear(); const s = await getDocs(query(collection(db, 'competicoes'), orderBy('nome'))); s.forEach(d => competitionsMap.set(d.id, { id: d.id, ...d.data() })); }
+async function fetchAndStoreClubs() {
+            // Usamos o clubOriginalOrder como referência; se ele estiver preenchido, não fazemos nada.
+            if (clubOriginalOrder.size > 0) return; 
+
+            const s = await getDocs(collection(db, 'clubes'));
+            let index = 0; // Inicia um contador de ordem
+            s.forEach(d => {
+                const clubData = { id: d.id, ...d.data() };
+                clubsMap.set(d.id, clubData);
+                clubOriginalOrder.set(d.id, index++); // Guarda o clube e a sua ordem, depois incrementa
+            });
+        }
+                async function fetchAndStoreCompetitions() { competitionsMap.clear(); const s = await getDocs(query(collection(db, 'competicoes'), orderBy('nome'))); s.forEach(d => competitionsMap.set(d.id, { id: d.id, ...d.data() })); }
         async function fetchAndStoreCountries() { if (countriesMap.size > 0) return; const s = await getDocs(collection(db, 'paises')); s.forEach(d => countriesMap.set(d.id, { id: d.id, ...d.data()})); }
         
         // --- FUNÇÕES DE RENDERIZAÇÃO DA SIDEBAR ---
@@ -819,27 +860,70 @@
             teams.forEach(team => { loadAndRenderPickcards(team.id, 'team'); });
         }
         
-       function setupGlobalSearch() {
-            const inputElement = document.getElementById('global-search-input');
-            const panelElement = document.getElementById('search-results-panel');
-            let debounceTimer;
-            inputElement.addEventListener('input', (event) => {
-                clearTimeout(debounceTimer);
-                const searchTerm = event.target.value.toLowerCase();
-                if (searchTerm.length < 2) { panelElement.style.display = 'none'; return; }
-                debounceTimer = setTimeout(() => {
-                    // --- LINHA MODIFICADA ---
-                    const filteredTeams = Array.from(clubsMap.values()).filter(team => 
-                        team.nome.toLowerCase().includes(searchTerm) || 
-                        (team.alcunha && team.alcunha.toLowerCase().includes(searchTerm))
-                    );
-                    const filteredCompetitions = Array.from(competitionsMap.values()).filter(comp => comp.nome.toLowerCase().includes(searchTerm) || (comp.namming && comp.namming.toLowerCase().includes(searchTerm)));
-                    renderSearchResults(filteredTeams, filteredCompetitions);
-                }, 300);
-            });
-            inputElement.addEventListener('focus', () => { if (inputElement.value.length > 1) { inputElement.dispatchEvent(new Event('input')); } });
-            document.addEventListener('click', (event) => { if (!document.getElementById('global-search-container').contains(event.target)) { panelElement.style.display = 'none'; } });
+  function setupGlobalSearch() {
+    const inputElement = document.getElementById('global-search-input');
+    const panelElement = document.getElementById('search-results-panel');
+    let debounceTimer;
+
+    const priorityCountryNames = ["England", "Spain", "Italy", "Germany", "Portugal", "France", "Brazil"];
+
+    inputElement.addEventListener('input', (event) => {
+        clearTimeout(debounceTimer);
+        const searchTerm = event.target.value.toLowerCase();
+        if (searchTerm.length < 2) {
+            panelElement.style.display = 'none';
+            return;
         }
+        debounceTimer = setTimeout(() => {
+            let filteredTeams = Array.from(clubsMap.values()).filter(team =>
+                team.nome.toLowerCase().includes(searchTerm) ||
+                (team.alcunha && team.alcunha.toLowerCase().includes(searchTerm))
+            );
+
+            const userCountryName = getUserCountryName();
+
+            const getTeamScore = (team) => {
+                const country = countriesMap.get(team.paisId);
+                if (!country) return 0;
+                if (country.nome === userCountryName) return 3;
+                if (priorityCountryNames.includes(country.nome)) return 2;
+                return 1;
+            };
+
+            filteredTeams.sort((a, b) => {
+                const scoreA = getTeamScore(a);
+                const scoreB = getTeamScore(b);
+
+                // 1. Ordena pela pontuação de relevância (país do user > país prioritário > outro)
+                if (scoreA !== scoreB) {
+                    return scoreB - scoreA;
+                }
+                
+                // 2. Critério de desempate: Ordena pela Ordem Original, mas invertida.
+                const orderA = clubOriginalOrder.get(a.id);
+                const orderB = clubOriginalOrder.get(b.id);
+                
+                // --- LÓGICA INVERTIDA ---
+                // Agora, o número de ordem MAIOR vem primeiro.
+                return orderB - orderA; 
+            });
+
+            const filteredCompetitions = Array.from(competitionsMap.values()).filter(comp => comp.nome.toLowerCase().includes(searchTerm) || (comp.namming && comp.namming.toLowerCase().includes(searchTerm)));
+            renderSearchResults(filteredTeams, filteredCompetitions);
+        }, 300);
+    });
+    inputElement.addEventListener('focus', () => {
+        if (inputElement.value.length > 1) {
+            inputElement.dispatchEvent(new Event('input'));
+        }
+    });
+    document.addEventListener('click', (event) => {
+        if (!document.getElementById('global-search-container').contains(event.target)) {
+            panelElement.style.display = 'none';
+        }
+    });
+}
+
 
         async function updateStatsFooter() {
     const teamsCountEl = document.getElementById('stats-teams-count');
