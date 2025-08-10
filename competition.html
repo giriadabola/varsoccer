@@ -198,6 +198,51 @@
     }
 }
 
+#competition-header {
+    display: flex;
+    align-items: center;
+    gap: 15px; 
+}
+
+/* A new container for the text elements to align them on the same line */
+#competition-header-text {
+    display: flex;
+    align-items: baseline; /* This is key for aligning text of different sizes */
+    gap: 15px;             /* Space between the name and the country info */
+}
+
+/* Container for the country info (divider, flag, name) */
+.competition-country-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    color: #606770;
+}
+
+/* Style for the country flag */
+.country-flag {
+    width: 20px;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Style for the divider */
+.country-divider {
+    font-weight: 300;
+    font-size: 1.5rem;
+    color: #ccc;
+}
+
+/* --- ADJUSTMENT FOR MOBILE --- */
+@media (max-width: 992px) {
+    #competition-header-text {
+        flex-wrap: wrap; /* Allows country info to wrap below on small screens */
+        gap: 5px 15px;   /* Adjust gap for wrapping */
+        align-items: center; /* Better alignment when wrapped */
+    }
+}
+
     </style>
 </head>
 <body>
@@ -245,114 +290,119 @@
         </div>
     </div>
 
-  <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore, collection, doc, getDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+ <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getFirestore, collection, doc, getDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-        // --- Configuração do Firebase (sem alterações) ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o",
-            authDomain: "varsoccer-26040.firebaseapp.com",
-            projectId: "varsoccer-26040",
-            storageBucket: "varsoccer-26040.firebasestorage.app",
-            messagingSenderId: "11877829810",
-            appId: "1:11877829810:web:98f9baa131a3b88b6e8dab"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    // --- Firebase Config ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o",
+        authDomain: "varsoccer-26040.firebaseapp.com",
+        projectId: "varsoccer-26040",
+        storageBucket: "varsoccer-26040.firebasestorage.app",
+        messagingSenderId: "11877829810",
+        appId: "1:11877829810:web:98f9baa131a3b88b6e8dab"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        // --- Variáveis globais (sem alterações) ---
-        let clubsMap = new Map();
-        let gamesOfSeason = [];
-        let currentCompetitionData = null;
+    // --- Global Variables ---
+    let clubsMap = new Map();
+    let countriesMap = new Map(); // (1) ADDED MAP FOR COUNTRIES
+    let gamesOfSeason = [];
+    let currentCompetitionData = null;
 
-        // --- FUNÇÃO MODIFICADA: fetchCompetitionDetails ---
-        const fetchCompetitionDetails = async (id) => {
-            console.log(`[LOG] A iniciar a busca por detalhes da competição com ID: ${id}`);
-            const docRef = doc(db, 'competicoes', id);
-            const docSnap = await getDoc(docRef);
+    // --- (2) ADDED FUNCTION TO FETCH COUNTRIES ---
+    const fetchAndStoreCountries = async () => {
+        if (countriesMap.size > 0) return;
+        try {
+            const snapshot = await getDocs(collection(db, 'paises'));
+            snapshot.forEach(doc => {
+                countriesMap.set(doc.id, doc.data());
+            });
+        } catch (error) {
+            console.error("Erro ao buscar países:", error);
+        }
+    };
 
-            if (docSnap.exists()) {
-                console.log("[LOG] Competição encontrada na base de dados:", docSnap.data());
-                currentCompetitionData = docSnap.data();
-                document.getElementById('competition-header').innerHTML = `<img src="${currentCompetitionData.logoUrl}" id="competition-logo"><h1 id="competition-name">${currentCompetitionData.nome}</h1>`;
-                return currentCompetitionData;
-            } else {
-                // ISTO É O QUE PROVAVELMENTE ESTÁ A ACONTECER
-                console.error(`[ERRO] Competição com o ID '${id}' NÃO FOI ENCONTRADA na base de dados.`);
-                
-                // Adicionei uma mensagem de erro clara para substituir o "Loading..."
-                document.getElementById('competition-header').innerHTML = `<h1>Erro: Competição não encontrada.</h1>`;
-                document.querySelector('.main-content').innerHTML = `<h1>Competição com ID '${id}' não encontrada.</h1><p>Por favor, verifique se o link está correto.</p>`;
-                
-                return null; // Retorna nulo como antes, indicando falha
+    // --- (3) MODIFIED FUNCTION: fetchCompetitionDetails ---
+    const fetchCompetitionDetails = async (id) => {
+        const docRef = doc(db, 'competicoes', id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            currentCompetitionData = docSnap.data();
+
+            let countryHtml = '';
+            // Check if competition has a country and if we have its data
+            if (currentCompetitionData.paisId && countriesMap.has(currentCompetitionData.paisId)) {
+                const country = countriesMap.get(currentCompetitionData.paisId);
+                countryHtml = `
+                    <div class="competition-country-info">
+                        <span class="country-divider">|</span>
+                        <img src="${country.bandeiraUrl}" alt="${country.nome}" class="country-flag">
+                        <span>${country.nome}</span>
+                    </div>
+                `;
             }
-        };
+            
+            // Build the final header HTML with the new structure
+            const headerHtml = `
+                <img src="${currentCompetitionData.logoUrl}" id="competition-logo">
+                <div id="competition-header-text">
+                    <h1 id="competition-name">${currentCompetitionData.nome}</h1>
+                    ${countryHtml}
+                </div>
+            `;
+            document.getElementById('competition-header').innerHTML = headerHtml;
 
-           // --- Restante do código (sem alterações, apenas colado abaixo para ser completo) ---
-        const fetchAndStoreClubs = async () => { if(clubsMap.size > 0) return; const s=await getDocs(collection(db,'clubes')); s.forEach(d=>clubsMap.set(d.id,d.data())); };
-        const fetchAllGamesForSeason = async (competitionId, seasonName) => { const lm=document.getElementById('games-loading-message'); lm.textContent=`Loading season matches for ${seasonName}...`; lm.style.display='block'; document.getElementById('more-matches-section').style.display='none'; const gq=query(collection(db,'jogos'),where("competicaoId","==",competitionId),where("temporada","==",seasonName)); const sn=await getDocs(gq); const rawGames=[]; sn.forEach(d=>rawGames.push({id:d.id,...d.data()})); const now=new Date(); now.setHours(0,0,0,0); gamesOfSeason=rawGames.filter(game=>{ const gameDate=parseDate(game.dataJogo); if(isNaN(gameDate.getTime()))return true; const isFutureGame=gameDate > now; const hasInvalidResult=!game.resultadoFinal || game.resultadoFinal.trim()==="" || game.resultadoFinal.toUpperCase()==='X'; return !(isFutureGame && hasInvalidResult); }); if(gamesOfSeason.length===0){ lm.textContent='No matches found for this season with the current filter.'; document.getElementById('games-grid').innerHTML=''; document.getElementById('team-list').innerHTML='<p>No teams found.</p>'; return; } gamesOfSeason.sort((a,b)=>parseDate(a.dataJogo) - parseDate(b.dataJogo)); lm.style.display='none'; renderTeamsList(gamesOfSeason); renderLatestGamesGrid(gamesOfSeason); renderJornadaDropdown(gamesOfSeason); document.getElementById('more-matches-section').style.display='block'; };
-        const renderTeamsList = (games) => { const tI = new Set(); games.forEach(g => { tI.add(g.equipaCasaId); tI.add(g.equipaForaId); }); const ts = []; tI.forEach(id => { if (clubsMap.has(id)) { ts.push({ id, ...clubsMap.get(id) }); } }); ts.sort((a, b) => a.nome.localeCompare(b.nome)); const le = document.getElementById('team-list'); le.innerHTML = '<h2>Teams</h2>'; ts.forEach(t => { le.innerHTML += `<a href="team.html?id=${t.id}" class="team-item"><img src="${t.logoUrl}" alt="${t.nome}" class="team-logo"><span class="team-name">${t.nome}</span></a>`; }); };
-        const renderLatestGamesGrid = (games) => { const gg=document.getElementById('games-grid'); gg.innerHTML=''; if(games.length===0)return; const ln=games[games.length - 1].jornada; const lg=games.filter(g=>String(g.jornada)==String(ln)); lg.forEach(g=>{ const ht=clubsMap.get(g.equipaCasaId); const at=clubsMap.get(g.equipaForaId); if(!ht || !at)return; gg.innerHTML+=`<div class="game-card"><div class="game-card-jornada">${isNaN(g.jornada)? g.jornada:'Round ' + g.jornada}</div><div class="game-card-content"><a href="team.html?id=${g.equipaCasaId}" class="game-card-team"><img src="${ht.logoUrl}"></a><a href="game.html?id=${g.id}" class="game-card-result">${g.resultadoFinal || 'VS'}</a><a href="team.html?id=${g.equipaForaId}" class="game-card-team"><img src="${at.logoUrl}"></a></div></div>`; }); };
-        const renderJornadaDropdown = (games) => { const container=document.getElementById('jornada-dropdown-container'); const uniqueJornadas=[...new Set(games.map(g=>g.jornada))].filter(j=>j!=null); if(uniqueJornadas.length > 0){ const competitionType=currentCompetitionData?.tipo; const specialOrder=['F','1F','MF','QF','1/8','POff']; const getSortPriority=(jornada)=>{ if(isNaN(jornada)){ if(competitionType==='Internacional Clubes' && jornada==='POff'){ return 3; } return 1; } return 2; }; uniqueJornadas.sort((a,b)=>{ const priorityA=getSortPriority(a); const priorityB=getSortPriority(b); if(priorityA!==priorityB){ return priorityA - priorityB; } if(priorityA===1){ return specialOrder.indexOf(a) - specialOrder.indexOf(b); } if(priorityA===2){ return Number(b) - Number(a); } return 0; }); let selectHTML=`<select id="jornada-dropdown">`; uniqueJornadas.forEach(j=>{ const displayText=isNaN(j)? j:`Round ${j}`; selectHTML+=`<option value="${j}">${displayText}</option>`; }); selectHTML+=`</select>`; container.innerHTML=selectHTML; const selector=document.getElementById('jornada-dropdown'); selector.addEventListener('change',e=>{ const value=isNaN(e.target.value)? e.target.value:Number(e.target.value); renderMoreMatchesList(value); }); const initialValue=isNaN(selector.value)? selector.value:Number(selector.value); renderMoreMatchesList(initialValue); document.getElementById('more-matches-section').style.display='block'; } else { container.innerHTML=''; document.getElementById('more-matches-section').style.display='none'; } };
-        function parseDate(dateString) { if (!dateString) return new Date(null); if (dateString.includes('-')) { return new Date(dateString); } const parts=dateString.split('/'); if (parts.length===3) { return new Date(parts[2], parts[1] - 1, parts[0]); } return new Date(null); }
-        const renderMoreMatchesList = (jornadaNumber) => { const lc=document.getElementById('more-matches-list'); const lm=document.getElementById('more-matches-loading-message'); lc.innerHTML=''; lm.style.display='none'; const fg=gamesOfSeason.filter(g=>String(g.jornada)===String(jornadaNumber)); if(fg.length===0){ lc.innerHTML='<p>No matches found for this round.</p>'; return; } fg.forEach(g=>{ lc.innerHTML+=`<a href="game.html?id=${g.id}" class="match-list-item"><img src="${currentCompetitionData.logoUrl}"><span>${g.nomeJogo}</span></a>`; }); };
-        const fetchAndRenderSeasonsDropdown = async (competitionId) => { const c=document.getElementById('seasons-dropdown-container'); const s=await getDocs(collection(db,'temporadas')); const sn=new Set(); s.forEach(d=>sn.add(d.data().nome)); if(sn.size>0){ const sel=document.createElement('select'); sel.id='seasons-dropdown'; Array.from(sn).sort().reverse().forEach(n=>{sel.innerHTML+=`<option value="${n}">${n}</option>`}); c.innerHTML=''; c.appendChild(sel); sel.addEventListener('change',e=>fetchAllGamesForSeason(competitionId, e.target.value)); fetchAllGamesForSeason(competitionId, sel.value); } };
-        const fetchAndRenderOtherCompetitions = async (countryId, currentCompId) => { const section=document.getElementById('other-competitions-section'); const gridContainer=document.getElementById('other-competitions-grid'); gridContainer.innerHTML=''; const q=query(collection(db, 'competicoes'), where("paisId", "==", countryId)); const querySnapshot=await getDocs(q); const otherCompetitions=[]; querySnapshot.forEach(doc=>{ if(doc.id!==currentCompId){ otherCompetitions.push({ id: doc.id, ...doc.data() }); } }); if(otherCompetitions.length > 0){ if(currentCompetitionData?.tipo==='Doméstica Liga'){ const typePriority={'Doméstica Liga':1,'Doméstica Taça':2}; otherCompetitions.sort((a,b)=>{ const priorityA=typePriority[a.tipo] || 99; const priorityB=typePriority[b.tipo] || 99; if(priorityA!==priorityB){ return priorityA - priorityB; } return a.nome.localeCompare(b.nome); }); } else { otherCompetitions.sort((a,b)=>a.nome.localeCompare(b.nome)); } otherCompetitions.forEach(comp=>{ gridContainer.innerHTML+=` <a href="competition.html?id=${comp.id}" class="competition-pick-card"> <img src="${comp.logoUrl}" alt="${comp.nome}"> <span>${comp.nome}</span> </a> `; }); section.style.display='block'; } else { section.style.display='none'; } };
-
-
-        function setupMobileMenu() {
-    const menuButton = document.getElementById('menu-toggle-btn');
-    const overlay = document.getElementById('page-overlay');
+            return currentCompetitionData;
+        } else {
+            document.getElementById('competition-header').innerHTML = `<h1>Erro: Competição não encontrada.</h1>`;
+            document.querySelector('.main-content').innerHTML = `<h1>Competição com ID '${id}' não encontrada.</h1><p>Por favor, verifique se o link está correto.</p>`;
+            return null;
+        }
+    };
     
-    if (menuButton) {
-        menuButton.addEventListener('click', () => {
-            document.body.classList.toggle('sidebar-open');
-        });
-    }
-
-    if (overlay) {
-        overlay.addEventListener('click', () => {
-            document.body.classList.remove('sidebar-open');
-        });
-    }
-}
-        
-        // --- FUNÇÃO MODIFICADA: initializePage ---
-       async function initializePage() {
-    console.log("[LOG] A inicializar a página competition.html...");
-    const competitionId = new URLSearchParams(window.location.search).get('id');
-    console.log(`[LOG] ID da competição obtido da URL: ${competitionId}`);
-
-    if (!competitionId) {
-        console.error("[ERRO] Nenhum ID de competição foi fornecido na URL.");
-        document.querySelector('.main-content').innerHTML = '<h1>ID da Competição não fornecido.</h1>';
-        return;
-    }
-
-    await fetchAndStoreClubs();
-    const compData = await fetchCompetitionDetails(competitionId);
+    // --- REST OF THE JAVASCRIPT CODE (UNCHANGED) ---
+    const fetchAndStoreClubs = async () => { if(clubsMap.size > 0) return; const s=await getDocs(collection(db,'clubes')); s.forEach(d=>clubsMap.set(d.id,d.data())); };
+    const fetchAllGamesForSeason = async (competitionId, seasonName) => { const lm=document.getElementById('games-loading-message'); lm.textContent=`Loading season matches for ${seasonName}...`; lm.style.display='block'; document.getElementById('more-matches-section').style.display='none'; const gq=query(collection(db,'jogos'),where("competicaoId","==",competitionId),where("temporada","==",seasonName)); const sn=await getDocs(gq); const rawGames=[]; sn.forEach(d=>rawGames.push({id:d.id,...d.data()})); const now=new Date(); now.setHours(0,0,0,0); gamesOfSeason=rawGames.filter(game=>{ const gameDate=parseDate(game.dataJogo); if(isNaN(gameDate.getTime()))return true; const isFutureGame=gameDate > now; const hasInvalidResult=!game.resultadoFinal || game.resultadoFinal.trim()==="" || game.resultadoFinal.toUpperCase()==='X'; return !(isFutureGame && hasInvalidResult); }); if(gamesOfSeason.length===0){ lm.textContent='No matches found for this season with the current filter.'; document.getElementById('games-grid').innerHTML=''; document.getElementById('team-list').innerHTML='<p>No teams found.</p>'; return; } gamesOfSeason.sort((a,b)=>parseDate(a.dataJogo) - parseDate(b.dataJogo)); lm.style.display='none'; renderTeamsList(gamesOfSeason); renderLatestGamesGrid(gamesOfSeason); renderJornadaDropdown(gamesOfSeason); document.getElementById('more-matches-section').style.display='block'; };
+    const renderTeamsList = (games) => { const tI = new Set(); games.forEach(g => { tI.add(g.equipaCasaId); tI.add(g.equipaForaId); }); const ts = []; tI.forEach(id => { if (clubsMap.has(id)) { ts.push({ id, ...clubsMap.get(id) }); } }); ts.sort((a, b) => a.nome.localeCompare(b.nome)); const le = document.getElementById('team-list'); le.innerHTML = '<h2>Teams</h2>'; ts.forEach(t => { le.innerHTML += `<a href="team.html?id=${t.id}" class="team-item"><img src="${t.logoUrl}" alt="${t.nome}" class="team-logo"><span class="team-name">${t.nome}</span></a>`; }); };
+    const renderLatestGamesGrid = (games) => { const gg=document.getElementById('games-grid'); gg.innerHTML=''; if(games.length===0)return; const ln=games[games.length - 1].jornada; const lg=games.filter(g=>String(g.jornada)==String(ln)); lg.forEach(g=>{ const ht=clubsMap.get(g.equipaCasaId); const at=clubsMap.get(g.equipaForaId); if(!ht || !at)return; gg.innerHTML+=`<div class="game-card"><div class="game-card-jornada">${isNaN(g.jornada)? g.jornada:'Round ' + g.jornada}</div><div class="game-card-content"><a href="team.html?id=${g.equipaCasaId}" class="game-card-team"><img src="${ht.logoUrl}"></a><a href="game.html?id=${g.id}" class="game-card-result">${g.resultadoFinal || 'VS'}</a><a href="team.html?id=${g.equipaForaId}" class="game-card-team"><img src="${at.logoUrl}"></a></div></div>`; }); };
+    const renderJornadaDropdown = (games) => { const container=document.getElementById('jornada-dropdown-container'); const uniqueJornadas=[...new Set(games.map(g=>g.jornada))].filter(j=>j!=null); if(uniqueJornadas.length > 0){ const competitionType=currentCompetitionData?.tipo; const specialOrder=['F','1F','MF','QF','1/8','POff']; const getSortPriority=(jornada)=>{ if(isNaN(jornada)){ if(competitionType==='Internacional Clubes' && jornada==='POff'){ return 3; } return 1; } return 2; }; uniqueJornadas.sort((a,b)=>{ const priorityA=getSortPriority(a); const priorityB=getSortPriority(b); if(priorityA!==priorityB){ return priorityA - priorityB; } if(priorityA===1){ return specialOrder.indexOf(a) - specialOrder.indexOf(b); } if(priorityA===2){ return Number(b) - Number(a); } return 0; }); let selectHTML=`<select id="jornada-dropdown">`; uniqueJornadas.forEach(j=>{ const displayText=isNaN(j)? j:`Round ${j}`; selectHTML+=`<option value="${j}">${displayText}</option>`; }); selectHTML+=`</select>`; container.innerHTML=selectHTML; const selector=document.getElementById('jornada-dropdown'); selector.addEventListener('change',e=>{ const value=isNaN(e.target.value)? e.target.value:Number(e.target.value); renderMoreMatchesList(value); }); const initialValue=isNaN(selector.value)? selector.value:Number(selector.value); renderMoreMatchesList(initialValue); document.getElementById('more-matches-section').style.display='block'; } else { container.innerHTML=''; document.getElementById('more-matches-section').style.display='none'; } };
+    function parseDate(dateString) { if (!dateString) return new Date(null); if (dateString.includes('-')) { return new Date(dateString); } const parts=dateString.split('/'); if (parts.length===3) { return new Date(parts[2], parts[1] - 1, parts[0]); } return new Date(null); }
+    const renderMoreMatchesList = (jornadaNumber) => { const lc=document.getElementById('more-matches-list'); const lm=document.getElementById('more-matches-loading-message'); lc.innerHTML=''; lm.style.display='none'; const fg=gamesOfSeason.filter(g=>String(g.jornada)===String(jornadaNumber)); if(fg.length===0){ lc.innerHTML='<p>No matches found for this round.</p>'; return; } fg.forEach(g=>{ lc.innerHTML+=`<a href="game.html?id=${g.id}" class="match-list-item"><img src="${currentCompetitionData.logoUrl}"><span>${g.nomeJogo}</span></a>`; }); };
+    const fetchAndRenderSeasonsDropdown = async (competitionId) => { const c=document.getElementById('seasons-dropdown-container'); const s=await getDocs(collection(db,'temporadas')); const sn=new Set(); s.forEach(d=>sn.add(d.data().nome)); if(sn.size>0){ const sel=document.createElement('select'); sel.id='seasons-dropdown'; Array.from(sn).sort().reverse().forEach(n=>{sel.innerHTML+=`<option value="${n}">${n}</option>`}); c.innerHTML=''; c.appendChild(sel); sel.addEventListener('change',e=>fetchAllGamesForSeason(competitionId, e.target.value)); fetchAllGamesForSeason(competitionId, sel.value); } };
+    const fetchAndRenderOtherCompetitions = async (countryId, currentCompId) => { const section=document.getElementById('other-competitions-section'); const gridContainer=document.getElementById('other-competitions-grid'); gridContainer.innerHTML=''; const q=query(collection(db, 'competicoes'), where("paisId", "==", countryId)); const querySnapshot=await getDocs(q); const otherCompetitions=[]; querySnapshot.forEach(doc=>{ if(doc.id!==currentCompId){ otherCompetitions.push({ id: doc.id, ...doc.data() }); } }); if(otherCompetitions.length > 0){ if(currentCompetitionData?.tipo==='Doméstica Liga'){ const typePriority={'Doméstica Liga':1,'Doméstica Taça':2}; otherCompetitions.sort((a,b)=>{ const priorityA=typePriority[a.tipo] || 99; const priorityB=typePriority[b.tipo] || 99; if(priorityA!==priorityB){ return priorityA - priorityB; } return a.nome.localeCompare(b.nome); }); } else { otherCompetitions.sort((a,b)=>a.nome.localeCompare(b.nome)); } otherCompetitions.forEach(comp=>{ gridContainer.innerHTML+=` <a href="competition.html?id=${comp.id}" class="competition-pick-card"> <img src="${comp.logoUrl}" alt="${comp.nome}"> <span>${comp.nome}</span> </a> `; }); section.style.display='block'; } else { section.style.display='none'; } };
+    function setupMobileMenu() { const menuButton = document.getElementById('menu-toggle-btn'); const overlay = document.getElementById('page-overlay'); if (menuButton) { menuButton.addEventListener('click', () => { document.body.classList.toggle('sidebar-open'); }); } if (overlay) { overlay.addEventListener('click', () => { document.body.classList.remove('sidebar-open'); }); } }
     
-    console.log("[LOG] Resultado da busca pela competição:", compData);
-
-    if (compData) {
-        console.log("[LOG] Dados da competição encontrados. A renderizar o resto da página...");
-        await fetchAndRenderSeasonsDropdown(competitionId);
-        if (compData.paisId) {
-            await fetchAndRenderOtherCompetitions(compData.paisId, competitionId);
+    // --- (4) MODIFIED FUNCTION: initializePage ---
+    async function initializePage() {
+        const competitionId = new URLSearchParams(window.location.search).get('id');
+        if (!competitionId) {
+            document.querySelector('.main-content').innerHTML = '<h1>ID da Competição não fornecido.</h1>';
+            return;
         }
 
-        // CHAME A FUNÇÃO DO MENU AQUI, NO FINAL
-        setupMobileMenu(); 
-
-    } else {
-        console.error("[ERRO] A renderização da página foi interrompida porque os dados da competição não foram encontrados.");
+        // Fetch all necessary data in parallel for efficiency
+        await Promise.all([fetchAndStoreClubs(), fetchAndStoreCountries()]);
+        
+        const compData = await fetchCompetitionDetails(competitionId);
+        
+        if (compData) {
+            await fetchAndRenderSeasonsDropdown(competitionId);
+            if (compData.paisId) {
+                await fetchAndRenderOtherCompetitions(compData.paisId, competitionId);
+            }
+            setupMobileMenu(); 
+        } else {
+            console.error("A renderização da página foi interrompida porque os dados da competição não foram encontrados.");
+        }
     }
-}
 
-// --- Iniciar a página ---
-initializePage();
+    // --- Start the page ---
+    initializePage();
+</script>
 
-    </script>
 </body>
 </html>
