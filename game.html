@@ -123,6 +123,9 @@
     }
 }
     
+    .related-game-team.away {
+    justify-content: flex-end;
+}
     
     
     </style>
@@ -256,7 +259,40 @@
         };
 
         const renderRelatedGames = (data, allSeasonGames) => { const lc = document.getElementById('related-games-list'); lc.innerHTML = ''; let gamesInSameJornada = allSeasonGames.filter(g => g.jornada == data.game.jornada); if (gamesInSameJornada.length === 0) { lc.innerHTML = '<p>Nenhum outro jogo nesta jornada.</p>'; return; }  gamesInSameJornada.sort((a,b) => parseDate(b.dataJogo) - parseDate(a.dataJogo));  gamesInSameJornada.forEach(g => {  const ht = clubsMap.get(g.equipaCasaId), at = clubsMap.get(g.equipaForaId);  if (ht && at) {  const ic = `related-game-item ${g.id === data.id ? 'current-game' : ''}`;  lc.innerHTML += `<a href="game.html?id=${g.id}" class="${ic}"><div class="related-game-team home"><img src="${ht.logoUrl}" class="related-game-logo" alt="${ht.nome}"><span class="related-game-team-name">${ht.nome}</span></div><span class="related-game-score">${g.resultadoFinal || 'VS'}</span><div class="related-game-team away"><span class="related-game-team-name">${at.nome}</span><img src="${at.logoUrl}" class="related-logo" alt="${at.nome}"></div></a>`;  }  });  };
-        const renderJornadaPicker = (currentGamedata, allSeasonGames) => { const pickerSection = document.getElementById('jornada-picker-section'); if (!allSeasonGames || allSeasonGames.length === 0) { pickerSection.style.display = 'none'; return; } const allJornadas = [...new Set(allSeasonGames.map(g => g.jornada))].sort((a, b) => a - b); let pickerHtml = '<h3>Rounds:</h3><div id="jornada-picker-container">'; allJornadas.forEach(jornadaNum => { const gamesInThisJornada = allSeasonGames.filter(g => g.jornada === jornadaNum); const hasCompletedGame = gamesInThisJornada.some(game => game.resultadoFinal && game.resultadoFinal !== 'X'); if (gamesInThisJornada.length > 0 && hasCompletedGame) { gamesInThisJornada.sort((a, b) => parseDate(b.dataJogo) - parseDate(a.dataJogo)); const firstGameOfJornada = gamesInThisJornada[0]; const isCurrentJornada = jornadaNum == currentGamedata.game.jornada; const cardClass = `jornada-pickcard ${isCurrentJornada ? 'current-jornada' : ''}`; pickerHtml += `<a href="game.html?id=${firstGameOfJornada.id}" class="${cardClass}">Round ${jornadaNum}</a>`; } }); pickerHtml += '</div>'; if (pickerHtml.includes('jornada-pickcard')) { pickerSection.innerHTML = pickerHtml; pickerSection.style.display = 'block'; } else { pickerSection.style.display = 'none'; } };
+const renderJornadaPicker = (currentGamedata, allSeasonGames) => {
+    const pickerSection = document.getElementById('jornada-picker-section');
+    if (!allSeasonGames || allSeasonGames.length === 0) {
+        pickerSection.style.display = 'none';
+        return;
+    }
+    const allJornadas = [...new Set(allSeasonGames.map(g => g.jornada))].sort((a, b) => a - b);
+
+    // --- MODIFICATION START ---
+    const competition = currentGamedata.competition;
+    // Create the title dynamically. If competition name exists, use it. Otherwise, fallback to "Rounds:".
+    const title = competition && competition.nome ? `Rounds of ${competition.nome}:` : 'Rounds:';
+    let pickerHtml = `<h3>${title}</h3><div id="jornada-picker-container">`;
+    // --- MODIFICATION END ---
+
+    allJornadas.forEach(jornadaNum => {
+        const gamesInThisJornada = allSeasonGames.filter(g => g.jornada === jornadaNum);
+        const hasCompletedGame = gamesInThisJornada.some(game => game.resultadoFinal && game.resultadoFinal !== 'X');
+        if (gamesInThisJornada.length > 0 && hasCompletedGame) {
+            gamesInThisJornada.sort((a, b) => parseDate(b.dataJogo) - parseDate(a.dataJogo));
+            const firstGameOfJornada = gamesInThisJornada[0];
+            const isCurrentJornada = jornadaNum == currentGamedata.game.jornada;
+            const cardClass = `jornada-pickcard ${isCurrentJornada ? 'current-jornada' : ''}`;
+            pickerHtml += `<a href="game.html?id=${firstGameOfJornada.id}" class="${cardClass}">Round ${jornadaNum}</a>`;
+        }
+    });
+    pickerHtml += '</div>';
+    if (pickerHtml.includes('jornada-pickcard')) {
+        pickerSection.innerHTML = pickerHtml;
+        pickerSection.style.display = 'block';
+    } else {
+        pickerSection.style.display = 'none';
+    }
+};
         const setupSuggestionListeners = (gameId) => { const ssb = document.getElementById('show-suggestion-form-btn'); if (!ssb) return; const sf = document.getElementById('suggestion-form'); const sb = document.getElementById('save-video-btn'); const ui = document.getElementById('video-url-input'); const searchBtn = document.getElementById('search-youtube-btn'); ssb.addEventListener('click', () => { ssb.style.display = 'none'; sf.style.display = 'flex'; }); sf.addEventListener('submit', async (event) => { event.preventDefault(); const nu = ui.value.trim(); sb.disabled = true; sb.textContent = 'A gravar...'; try { await updateDoc(doc(db, 'jogos', gameId), { videoUrl: nu }); location.reload(); } catch (e) { console.error("Erro ao gravar vídeo: ", e); alert("Ocorreu um erro. Por favor, tente novamente."); sb.disabled = false; sb.textContent = 'Gravar'; } }); searchBtn.addEventListener('click', () => { const gameTitle = document.getElementById('game-title').textContent; if (gameTitle && !gameTitle.includes('Loading')) { window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(gameTitle + " melhores momentos")}`, '_blank'); } else { alert("Por favor, aguarde o título do jogo carregar."); } }); };
         
 
