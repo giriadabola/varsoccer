@@ -845,26 +845,64 @@
     }
 });
 
-      document.getElementById('formCriarCompeticao').addEventListener('submit', async function(e) {
-    e.preventDefault(); 
-    const d = Object.fromEntries(new FormData(this).entries()); 
-    
-    // ESTA É A LÓGICA IMPORTANTE
-    if(d.posicaoMenu) {
-        // Se houver um valor, converte para número
-        d.posicaoMenu = parseInt(d.posicaoMenu); 
-    } else {
-        // Se estiver vazio, remove a propriedade antes de gravar
-        delete d.posicaoMenu; 
-    }
+     document.getElementById('formCriarCompeticao').addEventListener('submit', async function(e) {
+    e.preventDefault(); // Impede o envio padrão do formulário
+    const form = this;
+    const d = Object.fromEntries(new FormData(form).entries());
+    const competicaoSubmitBtn = form.querySelector('button[type="submit"]');
 
-    try { 
-        await addDoc(collection(db, "competicoes"), d); 
-        alert("Competição criada!"); 
-        this.reset(); 
-        fetchAllInitialData(); 
-    } catch(err){ 
-        alert("Erro: "+err.message); 
+    // --- INÍCIO DA NOVA LÓGICA DE VERIFICAÇÃO FINAL ---
+
+    const nomeParaVerificar = d.nome.trim();
+    if (!nomeParaVerificar) {
+        alert("O nome da competição não pode estar vazio.");
+        return;
+    }
+    
+    // Desativa o botão para prevenir múltiplos cliques enquanto verifica
+    competicaoSubmitBtn.disabled = true;
+    competicaoSubmitBtn.textContent = 'A verificar...';
+
+    try {
+        // 1. Faz uma consulta à base de dados em tempo real
+        const q = query(collection(db, "competicoes"), where("nome", "==", nomeParaVerificar));
+        const querySnapshot = await getDocs(q);
+
+        // 2. Verifica se a consulta retornou algum resultado
+        if (!querySnapshot.empty) {
+            // Se não estiver vazia, significa que a competição já existe
+            alert("Erro: Já existe uma competição com este nome na base de dados.");
+            document.getElementById('competicaoNomeError').textContent = 'Esta competição já existe!';
+            // Reativa o botão e para a execução
+            competicaoSubmitBtn.disabled = false;
+            competicaoSubmitBtn.textContent = 'Criar Competição';
+            return; 
+        }
+
+        // --- FIM DA NOVA LÓGICA DE VERIFICAÇÃO FINAL ---
+
+        // 3. Se a verificação passou, continua com a criação
+        // Converte a posição do menu para número, se existir
+        if (d.posicaoMenu) {
+            d.posicaoMenu = parseInt(d.posicaoMenu, 10);
+        } else {
+            // Garante que o campo é removido se estiver vazio para não gravar `null` ou `""`
+            delete d.posicaoMenu;
+        }
+
+        await addDoc(collection(db, "competicoes"), d);
+        alert("Competição criada com sucesso!");
+        form.reset();
+        document.getElementById('competicaoNomeError').textContent = '';
+        await fetchAllInitialData(); // Atualiza os dados na página
+
+    } catch(err) {
+        alert("Erro ao criar competição: " + err.message);
+        console.error("Erro no submit de competição: ", err);
+    } finally {
+        // Garante que o botão é reativado mesmo se ocorrer um erro
+        competicaoSubmitBtn.disabled = false;
+        competicaoSubmitBtn.textContent = 'Criar Competição';
     }
 });
         document.getElementById('formCriarTemporada').addEventListener('submit', async function(e) { e.preventDefault(); try { await addDoc(collection(db, "temporadas"), Object.fromEntries(new FormData(this).entries())); alert("Temporada criada!"); this.reset(); fetchAllInitialData(); } catch(err){ alert("Erro: "+err.message); }});
@@ -1146,7 +1184,7 @@ function updateResultadoFinal() {
         });
     }
 
-    
+
       async function fetchAllInitialData() {
             try {
                 const snaps = await Promise.all([ getDocs(query(collection(db, "paises"), orderBy("nome"))), getDocs(query(collection(db, "competicoes"), orderBy("nome"))), getDocs(query(collection(db, "clubes"), orderBy("nome"))), getDocs(query(collection(db, "temporadas"), orderBy("nome", "desc"))) ]);
