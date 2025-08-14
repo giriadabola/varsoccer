@@ -147,6 +147,26 @@
     text-align: center;
 }
 
+.action-btn.postponed-active {
+    background-color: #6f42c1; /* Roxo, para indicar estado ativo */
+    color: white;
+    font-weight: bold;
+    border: 1px solid #59369a;
+}
+
+
+#postponeBtn {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+/* Define o estado ATIVO (roxo) com a mesma especificidade (ID + classe) */
+#postponeBtn.postponed-active {
+    background-color: #6f42c1; /* Roxo */
+    color: white;
+    font-weight: bold;
+}
+
     </style>
 
 
@@ -251,7 +271,10 @@
                     <label for="extraInfoCompeticao">Competição</label>
                     <select id="extraInfoCompeticao" class="form-group input" required></select>
                 </div>
-                <div class="button-group">
+             <div class="button-group">
+                    <!-- NOVO BOTÃO -->
+<button type="button" id="postponeBtn" class="action-btn">Postponed</button>
+                    <!-- BOTÃO EXISTENTE -->
                     <button type="submit" id="saveExtraInfoBtn" class="action-btn save-btn">Guardar Alterações</button>
                 </div>
             </form>
@@ -295,8 +318,7 @@
     const channelsLinkModal = document.getElementById('channelsLinkModal');
     const closeChannelsLinkBtn = document.getElementById('closeChannelsLinkBtn');
     const channelsLinkList = document.getElementById('channelsLinkList');
-
-    // **NOVO** - Elementos do Modal de Informações Extra
+    
     const openExtraInfoModalBtn = document.getElementById('openExtraInfoModalBtn');
     const extraInfoModal = document.getElementById('extraInfoModal');
     const closeExtraInfoBtn = document.getElementById('closeExtraInfoBtn');
@@ -306,11 +328,13 @@
     const extraInfoTemporada = document.getElementById('extraInfoTemporada');
     const extraInfoCompeticao = document.getElementById('extraInfoCompeticao');
     const saveExtraInfoBtn = document.getElementById('saveExtraInfoBtn');
-const teamNameCasa = document.getElementById('teamNameCasa');
-const teamNameFora = document.getElementById('teamNameFora');
-const vsSeparator = document.querySelector('.vs-separator');
-const logoCasaBtnLine = document.getElementById('logoCasaBtnLine');
-const logoForaBtnLine = document.getElementById('logoForaBtnLine');
+    const teamNameCasa = document.getElementById('teamNameCasa');
+    const teamNameFora = document.getElementById('teamNameFora');
+    const vsSeparator = document.querySelector('.vs-separator');
+    const logoCasaBtnLine = document.getElementById('logoCasaBtnLine');
+    const logoForaBtnLine = document.getElementById('logoForaBtnLine');
+    
+    const postponeBtn = document.getElementById('postponeBtn');
 
     // --- Estado da Aplicação ---
     let allGamesFromDb = []; 
@@ -318,7 +342,8 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
     let selectedGame = null;
     let paisesMap = new Map(); 
     let competicoesMap = new Map();
-    let temporadasList = []; // **NOVO** - Para guardar a lista de temporadas
+    let temporadasList = []; 
+    let markAsPostponed = false;
 
     // --- Funções Auxiliares ---
     
@@ -411,7 +436,6 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
     const loadSeasonsAndSetDefault = async () => {
         const seasonsQuery = query(collection(db, "temporadas"), orderBy("nome", "desc"));
         const snapshot = await getDocs(seasonsQuery);
-        // **MODIFICADO** - Guarda a lista de temporadas para uso posterior
         temporadasList = snapshot.docs.map(doc => doc.data().nome); 
         const optionsHtml = temporadasList.map(nome => `<option value="${nome}">${nome}</option>`).join('');
         seasonSelector.innerHTML = '<option value="all">Todas as Temporadas</option>' + optionsHtml;
@@ -421,35 +445,30 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
     const formatGameDate = (dateString) => {
         if (!dateString || typeof dateString !== 'string') return '';
         const dateParts = dateString.split('-'); 
-        if (dateParts.length !== 3) return dateString; // Devolve original se o formato for inválido
+        if (dateParts.length !== 3) return dateString;
         return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`; 
     };
 
-  const clearEditPanel = () => {
-    editFieldset.disabled = true;
-    gameNameDisplay.textContent = 'Selecione um jogo da lista';
-    editForm.reset();
-    videoPreviewContainer.innerHTML = 'Pré-visualização do vídeo';
-    selectedGame = null;
-    
-    // Esconde os logos e os novos textos
-    logoCasaImg.style.display = 'none';
-    logoForaImg.style.display = 'none';
-    teamNameCasa.style.display = 'none';
-    teamNameFora.style.display = 'none';
-    vsSeparator.style.display = 'none';
-    
-    // Limpa a fonte das imagens
-    logoCasaImg.src = '';
-    logoForaImg.src = '';
-      // NOVO: Limpa também os logos da linha de botões
-    logoCasaBtnLine.style.display = 'none';
-    logoForaBtnLine.style.display = 'none';
-    logoCasaBtnLine.src = '';
-    logoForaBtnLine.src = '';
-    openExtraInfoModalBtn.style.display = 'none';
-    channelsBtn.disabled = true;
-};
+    const clearEditPanel = () => {
+        editFieldset.disabled = true;
+        gameNameDisplay.textContent = 'Selecione um jogo da lista';
+        editForm.reset();
+        videoPreviewContainer.innerHTML = 'Pré-visualização do vídeo';
+        selectedGame = null;
+        logoCasaImg.style.display = 'none';
+        logoForaImg.style.display = 'none';
+        teamNameCasa.style.display = 'none';
+        teamNameFora.style.display = 'none';
+        vsSeparator.style.display = 'none';
+        logoCasaImg.src = '';
+        logoForaImg.src = '';
+        logoCasaBtnLine.style.display = 'none';
+        logoForaBtnLine.style.display = 'none';
+        logoCasaBtnLine.src = '';
+        logoForaBtnLine.src = '';
+        openExtraInfoModalBtn.style.display = 'none';
+        channelsBtn.disabled = true;
+    };
     
     // --- Lógica Principal ---
     const applyFiltersAndRender = () => { 
@@ -506,7 +525,7 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
         document.querySelectorAll('#gamesList .active').forEach(el => el.classList.remove('active'));
         document.querySelector(`#gamesList li[data-id="${gameId}"]`).classList.add('active');
         editFieldset.disabled = false;
-        openExtraInfoModalBtn.style.display = 'inline-block'; // **NOVO** - Mostra o ícone
+        openExtraInfoModalBtn.style.display = 'inline-block';
         channelsBtn.disabled = true; 
 
         const competicao = competicoesMap.get(selectedGame.competicaoId);
@@ -520,40 +539,38 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
         useLinkOnlyCheckbox.checked = !!selectedGame.apiYt;
         renderVideoPreview(videoUrlInput.value);
         updateGeneratedFields();
-          teamNameCasa.textContent = selectedGame.equipaCasaNome;
-    teamNameFora.textContent = selectedGame.equipaForaNome;
-    teamNameCasa.style.display = 'inline';
-    teamNameFora.style.display = 'inline';
-    vsSeparator.style.display = 'inline';
+        teamNameCasa.textContent = selectedGame.equipaCasaNome;
+        teamNameFora.textContent = selectedGame.equipaForaNome;
+        teamNameCasa.style.display = 'inline';
+        teamNameFora.style.display = 'inline';
+        vsSeparator.style.display = 'inline';
         
         logoCasaImg.style.display = 'none';
         logoForaImg.style.display = 'none';
-     const [logoCasaUrl, logoForaUrl] = await Promise.all([
-        getLogoUrl(selectedGame.equipaCasaId),
-        getLogoUrl(selectedGame.equipaForaId)
-    ]);
-
-    // Lógica existente para os logos do cabeçalho
-    if (logoCasaUrl) { logoCasaImg.src = logoCasaUrl; logoCasaImg.style.display = 'block'; }
-    if (logoForaUrl) { logoForaImg.src = logoForaUrl; logoForaImg.style.display = 'block'; }
-
-    // NOVO: Adiciona a mesma lógica para os logos na linha dos botões
-    if (logoCasaUrl) {
-        logoCasaBtnLine.src = logoCasaUrl;
-        logoCasaBtnLine.style.display = 'block';
-    }
-    if (logoForaUrl) {
-        logoForaBtnLine.src = logoForaUrl;
-        logoForaBtnLine.style.display = 'block';
-    }
-};
+        const [logoCasaUrl, logoForaUrl] = await Promise.all([
+            getLogoUrl(selectedGame.equipaCasaId),
+            getLogoUrl(selectedGame.equipaForaId)
+        ]);
+        
+        if (logoCasaUrl) { logoCasaImg.src = logoCasaUrl; logoCasaImg.style.display = 'block'; }
+        if (logoForaUrl) { logoForaImg.src = logoForaUrl; logoForaImg.style.display = 'block'; }
+        
+        if (logoCasaUrl) { logoCasaBtnLine.src = logoCasaUrl; logoCasaBtnLine.style.display = 'block'; }
+        if (logoForaUrl) { logoForaBtnLine.src = logoForaUrl; logoForaBtnLine.style.display = 'block'; }
+    };
     
     const updateGeneratedFields = () => {
         if (!selectedGame) return;
         const casa = resultadoCasaInput.value;
         const fora = resultadoForaInput.value;
         const dataFormatada = formatGameDate(selectedGame.dataJogo);
-        gameNameDisplay.textContent = `${selectedGame.equipaCasaNome} ${casa}-${fora} ${selectedGame.equipaForaNome} - ${dataFormatada}`;
+
+        let resultadoDisplay = `${casa}-${fora}`;
+        if (selectedGame.resultadoFinal === 'PPD') {
+            resultadoDisplay = 'PPD';
+        }
+
+        gameNameDisplay.textContent = `${selectedGame.equipaCasaNome} ${resultadoDisplay} ${selectedGame.equipaForaNome} - ${dataFormatada}`;
     };
 
     const renderVideoPreview = (url) => {
@@ -568,29 +585,28 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
         }
     };
 
-    // **NOVO** - Funções para o Modal de Informações Extra
     const populateExtraInfoModalDropdowns = () => {
-    // Preencher Jornadas
-    let jornadaHtml = '';
-    for (let i = 1; i <= 60; i++) {
-        jornadaHtml += `<option value="${i}">${i}</option>`; // Alteração feita aqui
-    }
-    extraInfoJornada.innerHTML = jornadaHtml;
+        let jornadaHtml = '';
+        for (let i = 1; i <= 60; i++) {
+            jornadaHtml += `<option value="${i}">${i}</option>`;
+        }
+        extraInfoJornada.innerHTML = jornadaHtml;
 
-    // Preencher Temporadas
-    extraInfoTemporada.innerHTML = temporadasList.map(nome => `<option value="${nome}">${nome}</option>`).join('');
+        extraInfoTemporada.innerHTML = temporadasList.map(nome => `<option value="${nome}">${nome}</option>`).join('');
 
-    // Preencher Competições
-    let competicaoHtml = '';
-    competicoesMap.forEach((comp, id) => {
-        competicaoHtml += `<option value="${id}">${comp.nome}</option>`;
-    });
-    extraInfoCompeticao.innerHTML = competicaoHtml;
-};
+        let competicaoHtml = '';
+        competicoesMap.forEach((comp, id) => {
+            competicaoHtml += `<option value="${id}">${comp.nome}</option>`;
+        });
+        extraInfoCompeticao.innerHTML = competicaoHtml;
+    };
 
     const openExtraInfoModal = () => {
+        // MODIFICADO: Reseta o estado LÓGICO e VISUAL
+        markAsPostponed = false;
+        postponeBtn.classList.remove('postponed-active');
+
         if (!selectedGame) return;
-        // Preenche o formulário do modal com os dados atuais do jogo selecionado
         extraInfoDate.value = selectedGame.dataJogo || '';
         extraInfoJornada.value = selectedGame.jornada || '1';
         extraInfoTemporada.value = selectedGame.temporada || temporadasList[0];
@@ -607,7 +623,6 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
     [resultadoCasaInput, resultadoForaInput].forEach(el => el.addEventListener('input', updateGeneratedFields));
     videoUrlInput.addEventListener('input', (e) => renderVideoPreview(e.target.value));
 
-    // Listeners para o formulário principal
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedGame || saveBtn.disabled) return;
@@ -650,14 +665,25 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
         }
     });
     
-    searchYouTubeBtn.addEventListener('click', () => {
-        if (!selectedGame) return;
-        const searchTerm = `${gameNameDisplay.textContent} highlights`;
-        const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
-        window.open(youtubeUrl, '_blank');
-    });
+ searchYouTubeBtn.addEventListener('click', () => {
+    if (!selectedGame) return;
 
-    // Listeners para o modal de canais
+    let searchTerm = ''; // Declara a variável do termo de pesquisa
+
+    // Verifica se o resultado final do jogo é PPD
+    if (selectedGame.resultadoFinal === 'PPD') {
+        // Se for PPD, usa um termo de busca genérico com "x"
+        searchTerm = `${selectedGame.equipaCasaNome} x ${selectedGame.equipaForaNome} highlights`;
+    } else {
+        // Para todos os outros casos (com resultado), usa o texto do display
+        searchTerm = `${gameNameDisplay.textContent} highlights`;
+    }
+
+    // A parte final é a mesma para ambos os casos
+    const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
+    window.open(youtubeUrl, '_blank');
+});
+
     channelsBtn.addEventListener('click', () => {
         if (!selectedGame?.competicaoId) return;
         channelsLinkList.innerHTML = '';
@@ -678,10 +704,17 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
         channelsLinkModal.style.display = 'block';
     });
     closeChannelsLinkBtn.addEventListener('click', () => { channelsLinkModal.style.display = 'none'; });
-
-    // **NOVO** - Listeners para o Modal de Informações Extra
+    
     openExtraInfoModalBtn.addEventListener('click', openExtraInfoModal);
     closeExtraInfoBtn.addEventListener('click', () => { extraInfoModal.style.display = 'none'; });
+
+    // MODIFICADO - Listener de toggle para o botão Postponed
+    postponeBtn.addEventListener('click', () => {
+        // Inverte o estado da flag
+        markAsPostponed = !markAsPostponed;
+        // Adiciona ou remove a classe CSS com base no estado da flag
+        postponeBtn.classList.toggle('postponed-active', markAsPostponed);
+    });
     
     extraInfoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -692,7 +725,7 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
 
         const newCompeticaoId = extraInfoCompeticao.value;
         const newCompeticaoNome = competicoesMap.get(newCompeticaoId)?.nome || '';
-
+        
         const updatedData = {
             dataJogo: extraInfoDate.value,
             jornada: extraInfoJornada.value,
@@ -701,16 +734,24 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
             competicaoNome: newCompeticaoNome,
         };
 
+        if (markAsPostponed) {
+            Object.assign(updatedData, {
+                resultadoFinal: 'PPD',
+                resultadoCasa: null,
+                resultadoFora: null
+            });
+            // Gera um nome de jogo atualizado para o estado PPD
+            updatedData.nomeJogo = `${selectedGame.equipaCasaNome} PPD ${selectedGame.equipaForaNome} - ${formatGameDate(updatedData.dataJogo)}`;
+        }
+        
         try {
             await updateDoc(doc(db, 'jogos', selectedGame.id), updatedData);
             
-            // Atualiza o estado local para refletir as mudanças sem recarregar a página
             Object.assign(allGamesFromDb.find(g => g.id === selectedGame.id), updatedData);
             Object.assign(filteredGames.find(g => g.id === selectedGame.id), updatedData);
             Object.assign(selectedGame, updatedData);
 
-            // Atualiza a UI principal e fecha o modal
-            updateGeneratedFields(); // Atualiza o texto do "Jogo Selecionado:" com a nova data
+            updateGeneratedFields();
             saveExtraInfoBtn.textContent = 'Guardado!';
             saveExtraInfoBtn.style.backgroundColor = '#218838';
             
@@ -719,7 +760,6 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
                 saveExtraInfoBtn.textContent = 'Guardar Alterações';
                 saveExtraInfoBtn.style.backgroundColor = '#28a745';
                 saveExtraInfoBtn.disabled = false;
-                // Re-aplica filtros, pois a data ou temporada podem ter mudado
                 applyFiltersAndRender();
             }, 1000);
 
@@ -731,7 +771,6 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
         }
     });
 
-    // Listener global para fechar modais ao clicar fora
     window.addEventListener('click', (event) => {
         if (event.target == channelsLinkModal) {
             channelsLinkModal.style.display = 'none';
@@ -741,13 +780,12 @@ const logoForaBtnLine = document.getElementById('logoForaBtnLine');
         }
     });
 
-    // --- Inicialização ---
     document.addEventListener('DOMContentLoaded', async () => {
         try {
             await Promise.all([loadAllGames(), loadPaises(), loadCompeticoes(), loadSeasonsAndSetDefault()]);
             
             initializeMonthSelector();
-            populateExtraInfoModalDropdowns(); // **NOVO** - Preenche os dropdowns do novo modal
+            populateExtraInfoModalDropdowns();
             updateDaySelectorWithCounts();
             applyFiltersAndRender();
         } catch (error) {
