@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Menu - Versão Corrigida</title>
+    <style>
+        /* ESTILOS CSS COMPLETOS (sem alterações) */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; display: flex; }
+        body.admin-mode .competition-item { padding-right: 95px; }
+        .page-content { padding: 20px; flex-grow: 1; margin-left: 280px; transition: margin-left 0.3s ease-in-out; }
+        .page-content h1 { margin-bottom: 10px; }
+        .admin-mode-toggle { padding: 10px 15px; font-weight: bold; cursor: pointer; border-radius: 8px; border: 1px solid #ccc; background-color: #fff; margin-bottom: 20px; }
+        .admin-mode-toggle.active { background-color: #cce5ff; border-color: #007bff; color: #004085; }
+        .sidebar { width: 280px; flex-shrink: 0; background-color: #ffffff; padding: 15px; overflow-y: auto; border-right: 1px solid #dddfe2; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 1000; transition: transform 0.3s ease-in-out; }
+        #sidebar-search-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; }
+        #competition-list { flex-grow: 1; overflow-y: auto; position: relative; }
+        .sidebar.is-saving::after { content: 'A Guardar...'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 8px; z-index: 10; }
+        .competition-item { display: flex; align-items: center; padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; text-decoration: none; color: inherit; transition: background-color 0.2s, padding-right 0.2s; position: relative; }
+        .competition-item:hover { background-color: #f0f2f5; }
+        .competition-logo { width: 24px; height: 24px; object-fit: contain; margin-right: 10px; }
+        .competition-name { font-weight: 500; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .admin-controls { display: none; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); align-items: center; gap: 4px; background-color: #f0f2f5; padding: 3px; border-radius: 6px; }
+        body.admin-mode .admin-controls { display: flex; }
+        .admin-controls button { background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-weight: bold; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s, border-color 0.2s; }
+        .admin-controls button:hover:not(:disabled) { border-color: #333; }
+        .admin-controls button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .toggle-btn.active-yes { background-color: #28a745; color: white; border-color: #28a745; }
+        .toggle-btn.active-no { background-color: #dc3545; color: white; border-color: #dc3545; }
+        .sidebar-divider { margin: 12px 0; border: none; border-top: 1px solid #dddfe2; }
+        .country-group { margin-bottom: 4px; }
+        .country-header { display: flex; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease-in-out; position: relative; }
+        .country-header:hover { background-color: #f0f2f5; }
+        .country-header.active { background-color: #e7f3ff; font-weight: 600; }
+        .country-header::after { content: '›'; font-size: 1.5rem; color: #606770; position: absolute; right: 10px; transition: transform 0.3s ease; }
+        .country-header.active::after { transform: rotate(90deg); }
+        .country-flag { width: 24px; height: 16px; object-fit: cover; margin-right: 10px; border: 1px solid #eee; border-radius: 2px; }
+        .country-name { font-weight: 500; font-size: 0.9rem; }
+        .country-competitions-list { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; padding-left: 15px; margin-left: 18px; border-left: 2px solid #e9ecef; }
+        .loading-message { color: #888; padding: 10px; }
+    </style>
+</head>
+<body>
+    <nav class="sidebar" id="sidebar">
+        <input type="text" id="sidebar-search-input" placeholder="Pesquisar competição...">
+        <div id="competition-list"><p class="loading-message">A carregar menu...</p></div>
+    </nav>
+    <main class="page-content">
+        <h1>Gestão de Menu</h1>
+        <button id="admin-mode-toggle" class="admin-mode-toggle">Ativar Modo Admin</button>
+        <hr>
+        <p><strong>Versão Corrigida:</strong> A ordenação agora funciona corretamente, re-indexando a lista inteira a cada movimento.</p>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore, collection, query, getDocs, doc, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyBa6zi1FV_WFkatQW-w2vb_votXJ43p76o", authDomain: "varsoccer-26040.firebaseapp.com", projectId: "varsoccer-26040", storageBucket: "varsoccer-26040.firebasestorage.app", messagingSenderId: "11877829810", appId: "1:11877829810:web:98f9baa131a3b88b6e8dab" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let competitionsMap = new Map();
+        let countriesMap = new Map();
+        const sidebarEl = document.getElementById('sidebar');
+
+        async function fetchAllData() {
+            competitionsMap.clear(); countriesMap.clear();
+            const [compSnapshot, countrySnapshot] = await Promise.all([getDocs(query(collection(db, 'competicoes'))), getDocs(query(collection(db, 'paises')))]);
+            compSnapshot.forEach(d => competitionsMap.set(d.id, { id: d.id, ...d.data() }));
+            countrySnapshot.forEach(d => countriesMap.set(d.id, { id: d.id, ...d.data() }));
+        }
+        
+        function renderSidebar() {
+            // ... (Lógica de renderização sem alterações)
+            const listElement = document.getElementById('competition-list');
+            const priorityCountryNames = ["World", "Europe", "Asia", "South America", "North America", "Africa", "Oceania"];
+            const topCompetitions = [], competitionsByCountry = new Map();
+            for (const comp of competitionsMap.values()) {
+                if (comp.posicaoMenu != null) topCompetitions.push(comp);
+                if (comp.paisId) {
+                    if (!competitionsByCountry.has(comp.paisId)) competitionsByCountry.set(comp.paisId, []);
+                    competitionsByCountry.get(comp.paisId).push(comp);
+                }
+            }
+            const sortByPosicaoMenu = (a, b) => (a.posicaoMenu || 9999) - (b.posicaoMenu || 9999);
+            const sortBySubMenu = (a, b) => {
+                const aOrder = a.subMenu != null ? a.subMenu : Infinity;
+                const bOrder = b.subMenu != null ? b.subMenu : Infinity;
+                if (aOrder !== bOrder) return aOrder - bOrder;
+                return a.nome.localeCompare(b.nome);
+            };
+            topCompetitions.sort(sortByPosicaoMenu);
+            const priorityCountries = [], otherCountries = [];
+            for (const country of countriesMap.values()) {
+                if (competitionsByCountry.has(country.id)) (priorityCountryNames.includes(country.nome) ? priorityCountries : otherCountries).push(country);
+            }
+            priorityCountries.sort((a, b) => priorityCountryNames.indexOf(a.nome) - priorityCountryNames.indexOf(b.nome));
+            otherCountries.sort((a, b) => a.nome.localeCompare(b.nome));
+
+            const renderCompetitionItem = (comp, index, array, field) => {
+                const isFirst = index === 0;
+                const isLast = index === array.length - 1;
+                const noMenuStatus = comp.noMenu === 'Yes';
+                return `<div class="competition-item" data-id="${comp.id}" data-field="${field}">
+                            <img src="${comp.logoUrl}" class="competition-logo"><span class="competition-name">${comp.nome}</span>
+                            <div class="admin-controls">
+                                <button class="toggle-btn ${noMenuStatus ? 'active-yes' : 'active-no'}" title="Ativar/Desativar Destaque">${noMenuStatus ? 'S' : 'N'}</button>
+                                <button class="arrow-btn" data-direction="up" title="Mover para cima" ${isFirst ? 'disabled' : ''}>▲</button>
+                                <button class="arrow-btn" data-direction="down" title="Mover para baixo" ${isLast ? 'disabled' : ''}>▼</button>
+                            </div>
+                        </div>`;
+            };
+            let html = topCompetitions.map((comp, index, array) => renderCompetitionItem(comp, index, array, 'posicaoMenu')).join('');
+            if (topCompetitions.length > 0) html += `<hr class="sidebar-divider">`;
+            const renderCountryList = (countries) => {
+                countries.forEach(country => {
+                    const compsOfCountry = (competitionsByCountry.get(country.id) || []).sort(sortBySubMenu);
+                    html += `<div class="country-group" data-country-id="${country.id}">
+                                <div class="country-header"><img src="${country.bandeiraUrl}" class="country-flag"> <span class="country-name">${country.nome}</span></div>
+                                <div class="country-competitions-list">
+                                    ${compsOfCountry.map((comp, index, array) => renderCompetitionItem(comp, index, array, 'subMenu')).join('')}
+                                </div>
+                             </div>`;
+                });
+            };
+            renderCountryList(priorityCountries);
+            if (priorityCountries.length > 0 && otherCountries.length > 0) html += `<hr class="sidebar-divider">`;
+            renderCountryList(otherCountries);
+            listElement.innerHTML = html || '<p>Nenhuma competição encontrada.</p>';
+        }
+
+        // ATUALIZAÇÃO NO FIREBASE (LÓGICA DE RE-INDEXAÇÃO CORRIGIDA)
+        async function handleAdminAction(event) {
+            const button = event.target.closest('.admin-controls button');
+            if (!button || button.disabled) return;
+
+            const itemElement = button.closest('.competition-item');
+            const docId = itemElement.dataset.id;
+            sidebarEl.classList.add('is-saving');
+
+            try {
+                if (button.classList.contains('toggle-btn')) {
+                    const currentStatus = competitionsMap.get(docId).noMenu;
+                    const newStatus = currentStatus === 'Yes' ? 'No' : 'Yes';
+                    await updateDoc(doc(db, 'competicoes', docId), { noMenu: newStatus });
+                } else if (button.classList.contains('arrow-btn')) {
+                    const direction = button.dataset.direction;
+                    const fieldToUpdate = itemElement.dataset.field; // 'posicaoMenu' ou 'subMenu'
+                    
+                    // 1. Encontrar a lista de items no DOM
+                    const listContainer = itemElement.parentElement;
+                    const itemElements = Array.from(listContainer.children).filter(el => el.classList.contains('competition-item'));
+                    let itemIds = itemElements.map(el => el.dataset.id);
+                    
+                    // 2. Mover o item no array de IDs
+                    const currentIndex = itemIds.indexOf(docId);
+                    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+                    
+                    // Swap no array
+                    [itemIds[currentIndex], itemIds[targetIndex]] = [itemIds[targetIndex], itemIds[currentIndex]];
+                    
+                    // 3. Criar o batch para re-indexar toda a lista
+                    const batch = writeBatch(db);
+                    itemIds.forEach((id, index) => {
+                        const docRef = doc(db, 'competicoes', id);
+                        // A nova ordem é o índice + 1
+                        batch.update(docRef, { [fieldToUpdate]: index + 1 });
+                    });
+                    
+                    // 4. Salvar tudo no Firebase
+                    await batch.commit();
+                }
+                await initializeMenu();
+            } catch (error) {
+                console.error("Erro ao guardar a alteração:", error);
+                alert("Ocorreu um erro ao guardar a alteração. Verifique a consola para mais detalhes.");
+            } finally {
+                sidebarEl.classList.remove('is-saving');
+            }
+        }
+        
+        // FUNÇÕES DE CONFIGURAÇÃO E INICIALIZAÇÃO (sem alterações)
+        function setupEventListeners() {
+            const toggleAdminBtn = document.getElementById('admin-mode-toggle');
+            toggleAdminBtn.addEventListener('click', () => {
+                document.body.classList.toggle('admin-mode');
+                toggleAdminBtn.classList.toggle('active');
+                toggleAdminBtn.textContent = document.body.classList.contains('admin-mode') ? 'Desativar Modo Admin' : 'Ativar Modo Admin';
+            });
+            const listElement = document.getElementById('competition-list');
+            listElement.addEventListener('click', (event) => {
+                const target = event.target;
+                if (target.closest('.admin-controls')) {
+                    handleAdminAction(event);
+                } else if (target.closest('.country-header')) {
+                    const header = target.closest('.country-header');
+                    const content = header.nextElementSibling;
+                    header.classList.toggle('active');
+                    content.style.maxHeight = content.style.maxHeight ? null : content.scrollHeight + "px";
+                }
+            });
+        }
+
+        async function initializeMenu() {
+            try {
+                await fetchAllData();
+                renderSidebar();
+            } catch (error) {
+                console.error("Falha ao inicializar a página:", error);
+                document.getElementById('competition-list').innerHTML = '<p class="loading-message">Não foi possível ligar à base de dados.</p>';
+            }
+        }
+
+        initializeMenu();
+        setupEventListeners();
+    </script>
+</body>
+</html>
