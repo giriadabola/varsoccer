@@ -369,7 +369,7 @@
         function findTeamByName(name) { return allClubs.find(c => c.nome.toLowerCase() === name.trim().toLowerCase()) || null; }
 
  // Substitua a função original por esta versão melhorada
-  bulkModalElements.generateBtn.addEventListener('click', async () => {
+ bulkModalElements.generateBtn.addEventListener('click', async () => {
     const { text, generateBtn } = bulkModalElements;
     const rawText = text.value;
 
@@ -381,12 +381,10 @@
 
     if (!competicaoId) { alert("Por favor, selecione uma competição."); return; }
 
-    // Desativa o botão e mostra feedback ao utilizador
     generateBtn.disabled = true;
     generateBtn.textContent = 'A consultar a base de dados...';
 
     try {
-        // PASSO 1: Consultar o Firebase para obter a contagem de jogos existentes
         const teamGameCounts = new Map();
         const q = query(
             collection(db, "jogos"),
@@ -400,17 +398,16 @@
             const game = doc.data();
             const casa = game.equipaCasaNome;
             const fora = game.equipaForaNome;
-            // Popula o contador com os jogos já existentes
             teamGameCounts.set(casa, (teamGameCounts.get(casa) || 0) + 1);
             teamGameCounts.set(fora, (teamGameCounts.get(fora) || 0) + 1);
         });
         
         generateBtn.textContent = 'A gerar lista...';
 
-        // PASSO 2: Processar o texto colado, usando o contador pré-populado
         let gameCandidates = [];
-        const regexWithVs = /(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+vs\s+(.+?)\s+\3\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE|C)/i;
-        const regexWithScore = /(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+(\d+-\d+)\s+(.+?)\s+\4\s+(J\d+|POff|F|1\/8|QF|MF|1F|[1-3]PE|C)/i;
+        // REGEX ATUALIZADAS
+        const regexWithVs = /(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+vs\s+(.+?)\s+\3\s+(J\d+|\d+R|RP|POff|F|1\/8|QF|MF|1F|[1-3]PE|C)/i;
+        const regexWithScore = /(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2})?\s+(.+?)\s+\2\s+(\d+-\d+)(?:\s*\([^)]+\))?\s+(.+?)\s+\4\s+(J\d+|\d+R|RP|POff|F|1\/8|QF|MF|1F|[1-3]PE|C)/i;
         
         const gameBlocks = rawText.split(/h2h/i).filter(block => block.trim() !== '');
 
@@ -419,37 +416,46 @@
             let match;
             let gameData = {};
 
-            match = singleLineBlock.match(regexWithVs);
+            match = singleLineBlock.match(regexWithScore);
             if (match) {
-                gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), equipaForaNome: match[3].trim(), jornadaBruta: match[4], resultadoCasa: null, resultadoFora: null };
+                 const [resCasa, resFora] = match[3].split('-');
+                 gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), resultadoCasa: resCasa, resultadoFora: resFora, equipaForaNome: match[4].trim(), jornadaBruta: match[5] };
             } else {
-                match = singleLineBlock.match(regexWithScore);
-                if (match) {
-                    const [resCasa, resFora] = match[3].split('-');
-                    gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), resultadoCasa: resCasa, resultadoFora: resFora, equipaForaNome: match[4].trim(), jornadaBruta: match[5] };
-                }
+                 match = singleLineBlock.match(regexWithVs);
+                 if (match) {
+                    gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), equipaForaNome: match[3].trim(), jornadaBruta: match[4], resultadoCasa: null, resultadoFora: null };
+                 }
             }
             
+            // LÓGICA DE PROCESSAMENTO DA JORNADA ATUALIZADA
             if (match) {
                 let jornadaFinal;
-                if (gameData.jornadaBruta && gameData.jornadaBruta.toUpperCase() === 'C') {
-                    // A contagem agora parte dos valores obtidos do Firebase
+                const jornadaBrutaUpper = gameData.jornadaBruta.toUpperCase();
+
+                if (jornadaBrutaUpper === 'C') {
                     const currentCountCasa = teamGameCounts.get(gameData.equipaCasaNome) || 0;
                     const currentCountFora = teamGameCounts.get(gameData.equipaForaNome) || 0;
                     const newCount = Math.max(currentCountCasa, currentCountFora) + 1;
                     jornadaFinal = newCount;
                     teamGameCounts.set(gameData.equipaCasaNome, newCount);
                     teamGameCounts.set(gameData.equipaForaNome, newCount);
-                } else {
-                     jornadaFinal = (gameData.jornadaBruta && gameData.jornadaBruta.toUpperCase().startsWith('J')) ? gameData.jornadaBruta.substring(1) : gameData.jornadaBruta;
+                } 
+                else if (jornadaBrutaUpper.startsWith('J')) {
+                    jornadaFinal = jornadaBrutaUpper.substring(1);
+                } 
+                else if (/^\d+R$/.test(jornadaBrutaUpper)) { // Nova regra para Rondas (ex: 1R, 2R)
+                    jornadaFinal = jornadaBrutaUpper.slice(0, -1);
+                } 
+                else { // Mantém outros valores como RP, F, QF
+                    jornadaFinal = gameData.jornadaBruta;
                 }
+
                 gameCandidates.push({ ...gameData, jornada: jornadaFinal });
             } else if (singleLineBlock) {
                  console.warn("Linha não reconhecida e ignorada:", singleLineBlock);
             }
         }
 
-        // PASSO 3: Resolução de ambiguidades e exibição da pré-visualização (sem alterações)
         const ambiguities = new Map();
         const resolvedChoices = new Map();
         const findClubMatches = (name) => allClubs.filter(c => c.nome.toLowerCase() === name.trim().toLowerCase());
@@ -476,7 +482,6 @@
         console.error("Erro ao gerar lista de jogos:", error);
         alert("Ocorreu um erro ao comunicar com a base de dados: " + error.message);
     } finally {
-        // Reativa o botão e restaura o texto original, independentemente do resultado
         generateBtn.disabled = false;
         generateBtn.textContent = 'Gerar Lista de Jogos';
     }
