@@ -109,6 +109,14 @@
     text-overflow: ellipsis;
 }
 
+.preview-jornada {
+    margin-left: auto; /* Pushes it to the right, next to the main label */
+    margin-right: 20px; /* Adds some space before the invalid reason text */
+    color: #555;
+    font-size: 0.9em;
+    font-style: italic;
+    white-space: nowrap; /* Prevents the text from breaking into a new line */
+}
    
    </style>
 </head>
@@ -391,6 +399,7 @@
         function findTeamByName(name) { return allClubs.find(c => c.nome.toLowerCase() === name.trim().toLowerCase()) || null; }
 
  // Substitua a função original por esta versão melhorada
+ // Substitua a função original por esta versão melhorada
  bulkModalElements.generateBtn.addEventListener('click', async () => {
     const { text, generateBtn } = bulkModalElements;
     const rawText = text.value;
@@ -428,17 +437,14 @@
 
         let gameCandidates = [];
         
-        // --- REGRAS DE PARSING ATUALIZADAS ---
-        const roundIdentifiers = "J\\d+|\\d+R|RP|POff|F|1\\/8|QF|MF|1F|[1-3]PE|[A-Z]"; // Aceita letras de A-Z
+        // --- REGRAS DE PARSING ATUALIZADAS (JORNADA OPCIONAL) ---
+        const roundIdentifiers = "J\\d+|\\d+R|RP|POff|F|1\\/8|QF|MF|1F|[1-3]PE|[A-Z]";
         
-        // Regra 1: Para jogos com status (ANU, ADI)
-        const regexWithStatus = new RegExp(`(\\d{4}-\\d{2}-\\d{2})(?:\\s+\\d{2}:\\d{2})?\\s+(.+?)\\s+\\2\\s+(ANU|ADI)\\s+(.+?)\\s+\\4\\s+(${roundIdentifiers})`, 'i');
-        
-        // Regra 2: Para jogos com score numérico (agora ignora texto entre parêntesis)
-        const regexWithScore = new RegExp(`(\\d{4}-\\d{2}-\\d{2})(?:\\s+\\d{2}:\\d{2})?\\s+(.+?)\\s+\\2\\s+(\\d+-\\d+)(?:\\s*\\([^)]+\\))?\\s+(.+?)\\s+\\4\\s+(${roundIdentifiers})`, 'i');
-        
-        // Regra 3: Para jogos com "vs"
-        const regexWithVs = new RegExp(`(\\d{4}-\\d{2}-\\d{2})(?:\\s+\\d{2}:\\d{2})?\\s+(.+?)\\s+\\2\\s+vs\\s+(.+?)\\s+\\3\\s+(${roundIdentifiers})`, 'i');
+        // Regexes alteradas para tornar a jornada (e o espaço antes dela) opcional no final da linha.
+        // Adicionado `^` e `$` para garantir que a linha inteira corresponde.
+        const regexWithStatus = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})(?:\\s+\\d{2}:\\d{2})?\\s+(.+?)\\s+\\2\\s+(ANU|ADI)\\s+(.+?)\\s+\\4(?:\\s+(${roundIdentifiers}))?$`, 'i');
+        const regexWithScore = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})(?:\\s+\\d{2}:\\d{2})?\\s+(.+?)\\s+\\2\\s+(\\d+-\\d+)(?:\\s*\\([^)]+\\))?\\s+(.+?)\\s+\\4(?:\\s+(${roundIdentifiers}))?$`, 'i');
+        const regexWithVs = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})(?:\\s+\\d{2}:\\d{2})?\\s+(.+?)\\s+\\2\\s+vs\\s+(.+?)\\s+\\3(?:\\s+(${roundIdentifiers}))?$`, 'i');
 
         const gameBlocks = rawText.split(/h2h/i).filter(block => block.trim() !== '');
 
@@ -446,27 +452,32 @@
             const singleLineBlock = block.replace(/\n/g, ' ').trim();
             let match;
             let gameData = {};
+            let jornadaBruta; // Irá guardar o identificador da jornada, se existir
 
             // Tenta fazer o match pela ordem de especificidade
             if ((match = singleLineBlock.match(regexWithStatus))) {
-                gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), equipaForaNome: match[4].trim(), jornadaBruta: match[5], resultadoCasa: null, resultadoFora: null, status: 'PPD' };
+                gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), equipaForaNome: match[4].trim(), resultadoCasa: null, resultadoFora: null, status: 'PPD' };
+                jornadaBruta = match[5]; // Pode ser `undefined` se não houver jornada
             } else if ((match = singleLineBlock.match(regexWithScore))) {
                 const [resCasa, resFora] = match[3].split('-');
-                gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), resultadoCasa: resCasa, resultadoFora: resFora, equipaForaNome: match[4].trim(), jornadaBruta: match[5] };
+                gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), resultadoCasa: resCasa, resultadoFora: resFora, equipaForaNome: match[4].trim() };
+                jornadaBruta = match[5]; // Pode ser `undefined`
             } else if ((match = singleLineBlock.match(regexWithVs))) {
-                gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), equipaForaNome: match[3].trim(), jornadaBruta: match[4], resultadoCasa: null, resultadoFora: null };
+                gameData = { dataJogo: match[1], equipaCasaNome: match[2].trim(), equipaForaNome: match[3].trim(), resultadoCasa: null, resultadoFora: null };
+                jornadaBruta = match[4]; // Pode ser `undefined`
             }
             
             if (match) {
                 let jornadaFinal;
-                const jornadaBrutaUpper = gameData.jornadaBruta.toUpperCase();
+                const jornadaBrutaUpper = jornadaBruta ? jornadaBruta.toUpperCase() : undefined;
 
-                // --- NOVA REGRA PARA JORNADAS DINÂMICAS (A, B, C, etc.) ---
-                if (/^[A-Z]$/.test(jornadaBrutaUpper)) {
+                // --- LÓGICA ALTERADA: Calcula dinamicamente se a jornada estiver AUSENTE ou for uma LETRA ÚNICA ---
+                if (!jornadaBrutaUpper || /^[A-Z]$/.test(jornadaBrutaUpper)) {
                     const currentCountCasa = teamGameCounts.get(gameData.equipaCasaNome) || 0;
                     const currentCountFora = teamGameCounts.get(gameData.equipaForaNome) || 0;
                     const newCount = Math.max(currentCountCasa, currentCountFora) + 1;
                     jornadaFinal = newCount;
+                    // Atualiza a contagem para as próximas linhas na mesma lista
                     teamGameCounts.set(gameData.equipaCasaNome, newCount);
                     teamGameCounts.set(gameData.equipaForaNome, newCount);
                 } 
@@ -477,7 +488,7 @@
                     jornadaFinal = jornadaBrutaUpper.slice(0, -1);
                 } 
                 else { 
-                    jornadaFinal = gameData.jornadaBruta;
+                    jornadaFinal = jornadaBruta; // Usa o valor bruto para 'QF', 'F', etc.
                 }
                 
                 // Determina o resultado final para a pré-visualização
@@ -531,8 +542,9 @@
 
 
 
+
 // FUNÇÃO NOVA: Constrói a lista final de pré-visualização
-         async function buildFinalPreviewList(gameCandidates, resolvedChoices) {
+     async function buildFinalPreviewList(gameCandidates, resolvedChoices) {
     const { list, panel } = bulkModalElements;
     let nameCheckList = new Set();
     
@@ -551,10 +563,7 @@
         
         const [y,m,d] = candidate.dataJogo.split('-');
         
-        // --- LINHA CORRIGIDA ---
-        // Usa diretamente o `resultadoFinal` pré-processado ('PPD', '1-1', 'X', etc.)
         candidate.nomeJogo = `${candidate.equipaCasaNome} ${candidate.resultadoFinal} ${candidate.equipaForaNome} - ${d}/${m}/${y}`;
-        // --- FIM DA CORREÇÃO ---
 
         if (candidate.isValid) nameCheckList.add(candidate.nomeJogo);
     });
@@ -592,7 +601,17 @@
 
         const itemDiv = document.createElement('div');
         itemDiv.className = 'preview-item' + (isInvalid ? ' is-invalid' : '');
-        itemDiv.innerHTML = `<input type="checkbox" id="game-check-${index}" data-index="${index}" ${isInvalid ? 'disabled' : 'checked'}><label for="game-check-${index}">${game.nomeJogo}</label>${isInvalid ? `<span class="invalid-reason">${invalidReason}</span>` : ''}`;
+        
+        // --- LINHA MODIFICADA ---
+        // Adiciona a span .preview-jornada para mostrar a jornada do jogo.
+        itemDiv.innerHTML = `
+            <input type="checkbox" id="game-check-${index}" data-index="${index}" ${isInvalid ? 'disabled' : 'checked'}>
+            <label for="game-check-${index}">${game.nomeJogo}</label>
+            <span class="preview-jornada">Jornada: ${game.jornada}</span>
+            ${isInvalid ? `<span class="invalid-reason">${invalidReason}</span>` : ''}
+        `;
+        // --- FIM DA MODIFICAÇÃO ---
+
         list.appendChild(itemDiv);
     });
     window.gameCandidates = gameCandidates;
