@@ -488,26 +488,43 @@ async function fetchAndStoreClubs() {
                 }
                 
                 // Função auxiliar para não repetir código
-                const renderCountryGroup = (country) => {
-                    const countryId = country.id;
-                    const compsOfCountry = competitionsByCountry.get(countryId) || [];
-                    return `
-                        <div class="country-group">
-                            <div class="country-header" data-country-id="${countryId}">
-                                <img src="${country.bandeiraUrl}" class="country-flag" alt="${country.nome}">
-                                <span class="country-name">${country.nome}</span>
-                            </div>
-                            <div class="country-competitions-list" id="comps-for-${countryId}">
-                                ${compsOfCountry.map(comp => `
-                                    <a href="competition.html?id=${comp.id}" class="competition-item nested" data-namming="${comp.namming || ''}">
-                                        <img src="${comp.logoUrl}" class="competition-logo">
-                                        <span class="competition-name">${comp.nome}</span>
-                                    </a>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                };
+           const renderCountryGroup = (country) => {
+    const countryId = country.id;
+    
+    // A NOVA LÓGICA ESTÁ AQUI:
+    const sortBySubMenuAndAlpha = (a, b) => {
+        // Atribui um número muito grande (Infinity) aos itens sem 'subMenu' para que fiquem no fim.
+        const aOrder = a.subMenu != null ? a.subMenu : Infinity;
+        const bOrder = b.subMenu != null ? b.subMenu : Infinity;
+
+        // Se as ordens numéricas forem diferentes, ordena por elas.
+        if (aOrder !== bOrder) {
+            return aOrder - bOrder;
+        }
+
+        // Se as ordens numéricas forem iguais (ou ambas Infinity), ordena alfabeticamente.
+        return a.nome.localeCompare(b.nome);
+    };
+
+    const compsOfCountry = (competitionsByCountry.get(countryId) || []).sort(sortBySubMenuAndAlpha);
+
+    return `
+        <div class="country-group">
+            <div class="country-header" data-country-id="${countryId}">
+                <img src="${country.bandeiraUrl}" class="country-flag" alt="${country.nome}">
+                <span class="country-name">${country.nome}</span>
+            </div>
+            <div class="country-competitions-list" id="comps-for-${countryId}">
+                ${compsOfCountry.map(comp => `
+                    <a href="competition.html?id=${comp.id}" class="competition-item nested" data-namming="${comp.namming || ''}">
+                        <img src="${comp.logoUrl}" class="competition-logo">
+                        <span class="competition-name">${comp.nome}</span>
+                    </a>
+                `).join('')}
+            </div>
+        </div>
+    `;
+};
 
                 // Etapa B: Renderizar o grupo de países prioritários
                 priorityCountries.forEach(country => {
