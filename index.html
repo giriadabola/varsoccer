@@ -861,28 +861,30 @@ async function fetchAndStoreClubs() {
             teams.forEach(team => { loadAndRenderPickcards(team.id, 'team'); });
         }
         
-  function setupGlobalSearch() {
+ function setupGlobalSearch() {
     const inputElement = document.getElementById('global-search-input');
     const panelElement = document.getElementById('search-results-panel');
     let debounceTimer;
 
     const priorityCountryNames = ["England", "Spain", "Italy", "Germany", "Portugal", "France", "Brazil"];
 
-    inputElement.addEventListener('input', (event) => {
+    const triggerSearch = (rawSearchTerm) => {
+        // *** CORREÇÃO APLICADA AQUI ***
+        // O termo de pesquisa é limpo com .trim() antes de qualquer outra operação.
+        const searchTerm = rawSearchTerm.trim().toLowerCase();
+
         clearTimeout(debounceTimer);
-        const searchTerm = event.target.value.toLowerCase();
         if (searchTerm.length < 2) {
             panelElement.style.display = 'none';
             return;
         }
         debounceTimer = setTimeout(() => {
+            // --- LÓGICA PARA EQUIPAS ---
             let filteredTeams = Array.from(clubsMap.values()).filter(team =>
                 team.nome.toLowerCase().includes(searchTerm) ||
                 (team.alcunha && team.alcunha.toLowerCase().includes(searchTerm))
             );
-
             const userCountryName = getUserCountryName();
-
             const getTeamScore = (team) => {
                 const country = countriesMap.get(team.paisId);
                 if (!country) return 0;
@@ -890,34 +892,70 @@ async function fetchAndStoreClubs() {
                 if (priorityCountryNames.includes(country.nome)) return 2;
                 return 1;
             };
-
             filteredTeams.sort((a, b) => {
                 const scoreA = getTeamScore(a);
                 const scoreB = getTeamScore(b);
-
-                // 1. Ordena pela pontuação de relevância (país do user > país prioritário > outro)
-                if (scoreA !== scoreB) {
-                    return scoreB - scoreA;
-                }
-                
-                // 2. Critério de desempate: Ordena pela Ordem Original, mas invertida.
+                if (scoreA !== scoreB) { return scoreB - scoreA; }
                 const orderA = clubOriginalOrder.get(a.id);
                 const orderB = clubOriginalOrder.get(b.id);
-                
-                // --- LÓGICA INVERTIDA ---
-                // Agora, o número de ordem MAIOR vem primeiro.
-                return orderB - orderA; 
+                return orderB - orderA;
             });
 
-            const filteredCompetitions = Array.from(competitionsMap.values()).filter(comp => comp.nome.toLowerCase().includes(searchTerm) || (comp.namming && comp.namming.toLowerCase().includes(searchTerm)));
+            // --- LÓGICA PARA COMPETIÇÕES ---
+            let filteredCompetitions = Array.from(competitionsMap.values()).filter(comp =>
+                comp.nome.toLowerCase().includes(searchTerm) ||
+                (comp.namming && comp.namming.toLowerCase().includes(searchTerm))
+            );
+
+            const getCompetitionScore = (comp) => {
+                const country = countriesMap.get(comp.paisId);
+                if (!country) return 2;
+                if (country.nome === userCountryName) return 3;
+                if (priorityCountryNames.includes(country.nome)) return 2;
+                return 1;
+            };
+
+            filteredCompetitions.sort((a, b) => {
+                const scoreA = getCompetitionScore(a);
+                const scoreB = getCompetitionScore(b);
+                if (scoreA !== scoreB) return scoreB - scoreA;
+
+                const isTopA = a.noTopoMenu === 'Yes';
+                const isTopB = b.noTopoMenu === 'Yes';
+                if (isTopA !== isTopB) return isTopA ? -1 : 1;
+
+                const posA = a.posicaoMenu ? parseInt(a.posicaoMenu) : Infinity;
+                const posB = b.posicaoMenu ? parseInt(b.posicaoMenu) : Infinity;
+                if (posA !== posB) return posA - posB;
+
+                return a.nome.localeCompare(b.nome);
+            });
+
             renderSearchResults(filteredTeams, filteredCompetitions);
         }, 300);
+    };
+
+    // Evento para quando o utilizador digita ou apaga
+    inputElement.addEventListener('input', (event) => {
+        // Passamos o valor bruto para a função triggerSearch
+        triggerSearch(event.target.value);
     });
+
+    // Evento específico para quando o utilizador cola texto
+    inputElement.addEventListener('paste', () => {
+        setTimeout(() => {
+            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+        }, 50);
+    });
+
+    // Evento para reabrir os resultados ao focar no campo
     inputElement.addEventListener('focus', () => {
         if (inputElement.value.length > 1) {
-            inputElement.dispatchEvent(new Event('input'));
+            triggerSearch(inputElement.value);
         }
     });
+
+    // Evento para fechar o painel ao clicar fora da área de pesquisa
     document.addEventListener('click', (event) => {
         if (!document.getElementById('global-search-container').contains(event.target)) {
             panelElement.style.display = 'none';
